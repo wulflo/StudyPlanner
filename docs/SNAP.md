@@ -1,0 +1,241 @@
+# Empaquetado Snap
+
+> **Estado:** empaquetado y publicación manual a la Snap Store implementados
+> (2026-11-09). El nombre `study-planner` está registrado a la cuenta `wulflo` y
+> el secreto `SNAPCRAFT_STORE_CREDENTIALS` está cargado con un token limitado a
+> `study-planner` y a los canales `stable`, `beta` y `edge`. El workflow compila
+> el `.snap`, lo deja como artefacto y, al lanzarlo a mano, lo publica en el canal
+> elegido (`stable` por defecto). Los builds de `pull_request` solo compilan.
+> Revisión 1 (versión 0.1.0) liberada en `stable` el 2026-11-08; la ficha pública
+> puede tardar en aparecer mientras Canonical revisa el primer envío. Falta probar
+> la instalación desde la tienda en Ubuntu 24.04 limpio.
+
+## Decisión
+
+Study Planner se distribuye como snap `study-planner` con `base: core24` y
+`confinement: strict`. La app mantiene su regla de «sin red»: el snap **no
+declara** los plugs `network` ni `network-status`.
+
+Bajo snap, las actualizaciones las gestiona snapd desde la Snap Store. El updater
+de AppImage se deshabilita en runtime cuando existe la variable `SNAP`; ver
+[`docs/UPDATER.md`](UPDATER.md).
+
+## Confinamiento y permisos
+
+| Elemento | Valor |
+|---|---|
+| Nombre | `study-planner` |
+| Base | `core24` |
+| Confinamiento | `strict` |
+| Extensión | `gnome` (WebKitGTK/GTK, fuentes y temas del escritorio) |
+| Plugs | `home`, `removable-media` |
+| Red | Sin `network` ni `network-status` |
+| Actualizaciones | snapd / Snap Store |
+
+`home` permite abrir bóvedas dentro del directorio personal.
+`removable-media` permite bóvedas en unidades externas, pero **no se conecta
+automáticamente**; el usuario debe ejecutar:
+
+```bash
+sudo snap connect study-planner:removable-media
+```
+
+El snap no incluye la clave privada del updater ni ningún secreto. La clave
+pública minisign solo se usa en el build del AppImage; en snap esa ruta queda
+inactiva.
+
+### Instancia única
+
+La app usa `tauri-plugin-single-instance`, que en Linux se apoya en D-Bus. Bajo
+el confinamiento `strict`, publicar y consultar ese nombre requiere un slot
+`dbus` privilegiado (`app.studyplanner.desktop.SingleInstance`) y una revisión
+manual de la Snap Store. El slot no está declarado: el plugin detecta que no
+puede registrar el nombre y avisa en el log.
+
+Para que el snap no quede sin protección, la app tiene un respaldo propio en
+Unix (`src-tauri/src/instance.rs`): toma un `flock` exclusivo sobre
+`instance.lock` en su directorio de datos y escucha en `instance.sock`. Si otra
+instancia no puede usar D-Bus, al abrir la app encuentra el lock tomado, le pide
+por el socket que muestre su ventana y se cierra sin crear otra ventana ni otro
+icono en la bandeja. El lock se libera solo cuando el proceso muere, así que un
+cierre abrupto no deja la app bloqueada. En AppImage, `.deb`, `.rpm`, Windows y
+macOS la instancia única funciona sin configuración adicional.
+
+## Archivos
+
+- `snap/snapcraft.yaml` — definición del paquete.
+- `.snapcraftignore` — excluye artefactos de build, `node_modules`, `target` y
+  binarios ya empaquetados.
+- `snap/gui/study-planner.png` — ícono de la ficha de la Snap Store.
+- `.github/workflows/snap.yml` — compilación en CI y publicación manual a `stable`, `beta` o `edge`.
+- `.github/workflows/snap-promote.yml` — promoción de una revisión existente a otro canal, sin recompilar.
+- `scripts/check-snap-version.sh` — exige que la versión del snap coincida con
+  `src-tauri/tauri.conf.json`.
+
+## Build local
+
+El build se hace con Snapcraft 8 dentro de un contenedor para no ensuciar el
+sistema. Desde la raíz del repo:
+
+```bash
+mkdir -p /tmp/opencode/snap-build
+podman run --rm --userns=keep-id \
+  -v "$PWD:/work:Z" \
+  -v /tmp/opencode/snap-build:/work/build:Z \
+  -w /work \
+  ghcr.io/canonical/snapcraft:8_core24 \
+  snapcraft pack --destructive-mode --output /work/build
+```
+
+El `.snap` queda en `/tmp/opencode/snap-build/`. Si preferís Snapcraft instalado
+en el host, alcanza con `snapcraft pack` desde la raíz.
+
+> No uses `snapcore/snapcraft:stable`: esa imagen trae Snapcraft 4.4.4 (2020) y no
+> es compatible con `core24` ni con las credenciales actuales.
+
+## CI: build y publicación manual
+
+`.github/workflows/snap.yml` se dispara a mano (`workflow_dispatch`) o con cambios
+en `snap/**`. Pasos:
+
+1. Checkout.
+2. `bash scripts/check-snap-version.sh`.
+3. `snapcore/action-build@v1`.
+4. Subida del `.snap` como artefacto `study-planner-snap`.
+5. `snapcore/action-publish@v1` al canal elegido (`stable` por defecto, `beta` o
+   `edge` para pruebas), **solo** en `workflow_dispatch`.
+
+Los builds de `pull_request` nunca publican: no reciben secretos y el paso de
+publicación está condicionado al disparo manual. Para publicar una revisión hay
+que lanzar el workflow «Snap» a mano desde la pestaña Actions y elegir el canal.
+
+## Promover una revisión
+
+Después de validar una revisión en `edge` o `beta`, se promueve sin recompilar:
+**Actions → Snap promote → Run workflow**, con el número de revisión y el canal
+destino (`stable` por defecto). El workflow ejecuta:
+
+```bash
+snapcraft release study-planner <revisión> <canal>
+```
+
+usando `SNAPCRAFT_STORE_CREDENTIALS`; no sube un paquete nuevo ni vuelve a firmar.
+
+## Credenciales de Snapcraft
+
+> **Estado actual:** nombre `study-planner` registrado a la cuenta `wulflo` y
+> `SNAPCRAFT_STORE_CREDENTIALS` cargado en GitHub. El token está limitado a
+> `study-planner`, a los canales `stable`, `beta` y `edge`, a los ACLs de paquete
+> y expira el 2027-11-08.
+
+El registro del nombre y el login con contraseña + 2FA los hace el usuario. Se usa
+la imagen `docker.io/snapcore/snapcraft:stable` (4.4.4), que guarda la sesión en
+`~/.snapcraft` y evita el problema de keyring de Snapcraft 8.x. El token se exporta
+a un archivo temporal y se guarda como secreto de GitHub sin imprimirlo.
+
+```bash
+mkdir -p /tmp/opencode/snap && chmod 700 /tmp/opencode/snap
+cd /tmp/opencode/snap
+
+podman run --rm -it \
+  -v "$PWD:/work" -w /work \
+  docker.io/snapcore/snapcraft:stable \
+  bash -lc 'snapcraft login && snapcraft export-login \
+    --snaps study-planner \
+    --channels stable,beta,edge \
+    --acls package_access,package_push,package_update,package_release \
+    /work/snap-login.txt'
+```
+
+Si el nombre todavía no estuviera registrado, se ejecuta
+`snapcraft register study-planner` dentro del mismo contenedor antes del
+`export-login`. Si ya está registrado, el registro falla y se sigue igual.
+
+El token queda limitado a `study-planner` y a los canales `stable`, `beta` y
+`edge`. El workflow elige el canal al lanzarse; no hace falta ampliar el token
+para publicar en `stable`.
+
+Guardar en GitHub Secrets:
+
+```bash
+gh secret set SNAPCRAFT_STORE_CREDENTIALS < /tmp/opencode/snap/snap-login.txt
+gh secret list | grep SNAPCRAFT_STORE_CREDENTIALS
+```
+
+`gh secret list` solo muestra el nombre y la fecha. Nunca se hace `cat` del token
+ni se pega en el repo, issues o chat.
+
+Limpiar los temporales:
+
+```bash
+shred -u /tmp/opencode/snap/snap-login.txt
+rm -rf /tmp/opencode/snap
+```
+
+## Instalación y prueba
+
+El snap es `strict`, así que la instalación local **no** lleva `--classic`:
+
+```bash
+sudo snap install --dangerous /tmp/opencode/snap-build/study-planner_*.snap
+study-planner
+```
+
+Para bóvedas en `/run/media` o discos externos:
+
+```bash
+sudo snap connect study-planner:removable-media
+```
+
+Verificar el confinamiento:
+
+```bash
+snap info study-planner | grep -E 'confinement|channels'
+snap connections study-planner
+```
+
+Probar en una máquina Ubuntu 24.04 limpia antes de publicar: arranque, apertura de
+bóveda en `$HOME`, bóveda en unidad externa, exportación/importación y que
+«Ajustes» muestre que snapd gestiona las actualizaciones.
+
+## Publicación (pendiente)
+
+Cuando el usuario lo pida:
+
+1. Confirmar que `SNAPCRAFT_STORE_CREDENTIALS` está cargado.
+2. Agregar `snapcore/action-publish@v2` (o el paso equivalente) al workflow.
+3. Elegir el canal (`edge` para la primera prueba).
+4. Verificar con `snap info study-planner` y `snap install study-planner --edge`.
+5. Promover a `beta`/`stable` solo tras la prueba en limpio.
+
+El token actual no permite publicar fuera de `edge`.
+
+## Riesgos y límites
+
+- **Rust en el build:** `snapcraft.yaml` instala el toolchain con el
+  `rustup-init` oficial dentro de `override-build`. El snap `rustup/latest`
+  apunta a core26 y choca con la libc del SDK gnome-46 (core24), que falla con
+  `undefined symbol: __nptl_change_stack_perm`.
+- **WebKitGTK:** la extensión `gnome` aporta WebKitGTK/GTK; el `layout` apunta a
+  `$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/webkit2gtk-4.1`. Hay que revisar el
+  arranque real en cada actualización de base o de la extensión.
+- **Sin red:** cualquier función futura que necesite red (por ejemplo, un canal de
+  actualizaciones propio) requerirá un plug explícito y una revisión de la
+  auditoría `scripts/audit-network.sh`.
+- **`removable-media`:** no se auto-conecta; documentado arriba.
+- **Tamaño:** el snap incluye WebKitGTK y dependencias de escritorio; es más grande
+  que el AppImage. Es el costo de un entorno reproducible y actualizable por snapd.
+- **Licencias:** Snapcraft es una herramienta de build GPL-3.0 y no se distribuye
+  dentro del snap. WebKitGTK/GTK siguen siendo LGPL enlazadas dinámicamente; ver
+  [`THIRD_PARTY_LICENSES.md`](../THIRD_PARTY_LICENSES.md).
+
+## Verificación
+
+`./scripts/check.sh` valida además:
+
+- versión del snap sincronizada con la app (`check-snap-version.sh`);
+- `confinement: strict`;
+- ausencia de plugs de red;
+- presencia de `removable-media`.
+
+La auditoría está en `scripts/audit-network.sh`, sección «Snap».

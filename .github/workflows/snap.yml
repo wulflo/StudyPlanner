@@ -1,0 +1,64 @@
+name: Snap
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Canal de la Snap Store"
+        required: true
+        default: stable
+        type: choice
+        options:
+          - stable
+          - beta
+          - edge
+  pull_request:
+    paths:
+      - "snap/**"
+      - ".snapcraftignore"
+      - ".github/workflows/snap.yml"
+      - "scripts/check-snap-version.sh"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compilar snap
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verificar versión del snap
+        run: bash scripts/check-snap-version.sh
+
+      - name: Compilar snap
+        id: build
+        uses: snapcore/action-build@d12445ae70c52b1ead8b8a0ac6635f0432af5c80 # v1.3.0
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: study-planner-snap
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error
+
+      # Solo se publica al lanzar el workflow a mano. Los builds de pull_request
+      # (incluidos los de forks, sin acceso a secretos) nunca suben a la tienda.
+      - name: Publicar en la Snap Store
+        if: github.event_name == 'workflow_dispatch'
+        uses: snapcore/action-publish@d383e5c99f47316f8c8d74be837f6a77455ec5a6 # v1.2.0
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: ${{ inputs.channel }}
