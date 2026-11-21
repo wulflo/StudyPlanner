@@ -105,6 +105,34 @@ pub struct Subject {
     pub updated_at: String,
 }
 
+/// Ciclo del plan de estudios (por ejemplo, un año o un cuatrimestre).
+///
+/// Es independiente de `Term`: el plan de estudios describe la carrera
+/// completa, mientras que los términos organizan el dictado de cada período.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StudyCycle {
+    pub id: String,
+    pub name: String,
+    pub position: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// Materia del plan de estudios, con su estado de aprobación.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StudyPlanSubject {
+    pub id: String,
+    pub cycle_id: String,
+    pub name: String,
+    pub code: Option<String>,
+    pub approved: bool,
+    pub position: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Recurrence {

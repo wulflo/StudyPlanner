@@ -1,7 +1,49 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
+
+const NAV_GROUP_BY_SECTION: Record<string, string> = {
+  Hoy: "Diario",
+  Calendario: "Diario",
+  Tareas: "Diario",
+  Materias: "Academia",
+  Horario: "Academia",
+  Exámenes: "Academia",
+  Notas: "Academia",
+  Estudio: "Estudio",
+  Fortalezas: "Estudio",
+  Estadísticas: "Estudio",
+  Bóveda: "Sistema",
+  Ajustes: "Sistema",
+};
+
+async function goToSection(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  const direct = screen.queryByRole("button", { name });
+  if (direct) {
+    await user.click(direct);
+    return;
+  }
+  const group = NAV_GROUP_BY_SECTION[name];
+  if (group) {
+    const expand = screen.queryByRole("button", {
+      name: `Expandir sección ${group}`,
+    });
+    if (expand) {
+      await user.click(expand);
+    }
+  }
+  await user.click(await screen.findByRole("button", { name }));
+}
 
 const api = vi.hoisted(() => ({
   getAppInfo: vi.fn(),
@@ -69,6 +111,15 @@ const api = vi.hoisted(() => ({
   createSubject: vi.fn(),
   updateSubject: vi.fn(),
   deleteSubject: vi.fn(),
+  listStudyCycles: vi.fn(),
+  createStudyCycle: vi.fn(),
+  updateStudyCycle: vi.fn(),
+  deleteStudyCycle: vi.fn(),
+  listStudyPlanSubjects: vi.fn(),
+  createStudyPlanSubject: vi.fn(),
+  updateStudyPlanSubject: vi.fn(),
+  setStudyPlanSubjectApproved: vi.fn(),
+  deleteStudyPlanSubject: vi.fn(),
   listClassSlots: vi.fn(),
   createClassSlot: vi.fn(),
   updateClassSlot: vi.fn(),
@@ -228,6 +279,15 @@ function todayIso(): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+async function selectCustomOption(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+  optionName: string,
+) {
+  await user.click(screen.getByLabelText(label));
+  await user.click(await screen.findByRole("option", { name: optionName }));
+}
+
 const academicYear = {
   id: "year-1",
   name: "2026",
@@ -259,6 +319,25 @@ const algebra = {
   credits: 6,
   goalScoreCp: null,
   attendanceMinBp: 7500,
+  createdAt: "2026-11-08T10:00:00.000Z",
+  updatedAt: "2026-11-08T10:00:00.000Z",
+};
+
+const studyCycle = {
+  id: "cycle-1",
+  name: "Ciclo básico",
+  position: 0,
+  createdAt: "2026-11-08T10:00:00.000Z",
+  updatedAt: "2026-11-08T10:00:00.000Z",
+};
+
+const studyPlanSubject = {
+  id: "plan-subject-1",
+  cycleId: "cycle-1",
+  name: "Análisis I",
+  code: "MAT-201",
+  approved: false,
+  position: 0,
   createdAt: "2026-11-08T10:00:00.000Z",
   updatedAt: "2026-11-08T10:00:00.000Z",
 };
@@ -734,6 +813,18 @@ beforeEach(() => {
   api.createSubject.mockResolvedValue(algebra);
   api.updateSubject.mockResolvedValue(algebra);
   api.deleteSubject.mockResolvedValue(undefined);
+  api.listStudyCycles.mockResolvedValue([studyCycle]);
+  api.createStudyCycle.mockResolvedValue(studyCycle);
+  api.updateStudyCycle.mockResolvedValue(studyCycle);
+  api.deleteStudyCycle.mockResolvedValue(undefined);
+  api.listStudyPlanSubjects.mockResolvedValue([studyPlanSubject]);
+  api.createStudyPlanSubject.mockResolvedValue(studyPlanSubject);
+  api.updateStudyPlanSubject.mockResolvedValue(studyPlanSubject);
+  api.setStudyPlanSubjectApproved.mockResolvedValue({
+    ...studyPlanSubject,
+    approved: true,
+  });
+  api.deleteStudyPlanSubject.mockResolvedValue(undefined);
   api.listClassSlots.mockResolvedValue([]);
   api.createClassSlot.mockResolvedValue(classSlot);
   api.updateClassSlot.mockResolvedValue(classSlot);
@@ -872,7 +963,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Tareas" }));
+    await goToSection(user, "Tareas");
     const input = await screen.findByLabelText("Nueva tarea");
     await user.type(input, "Preparar final");
 
@@ -896,7 +987,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Tareas" }));
+    await goToSection(user, "Tareas");
     const checkbox = await screen.findByRole("checkbox", {
       name: "Completar «Repasar matrices»",
     });
@@ -925,7 +1016,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Tareas" }));
+    await goToSection(user, "Tareas");
     const remove = await screen.findByRole("button", {
       name: "Eliminar «Repasar matrices»",
     });
@@ -964,7 +1055,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Bóveda" }));
+    await goToSection(user, "Bóveda");
 
     expect(await screen.findByText("Backup principal")).toBeInTheDocument();
     expect(screen.getByText(/2026-11-08/)).toBeInTheDocument();
@@ -983,7 +1074,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Bóveda" }));
+    await goToSection(user, "Bóveda");
     await user.click(
       await screen.findByRole("button", { name: "Exportar bóveda" }),
     );
@@ -1000,7 +1091,7 @@ describe("App con IPC de Tauri", () => {
     api.listTasks.mockResolvedValue([]);
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Bóveda" }));
+    await goToSection(user, "Bóveda");
     const importButton = await screen.findByRole("button", {
       name: "Importar en bóveda vacía",
     });
@@ -1018,7 +1109,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Bóveda" }));
+    await goToSection(user, "Bóveda");
 
     expect(
       await screen.findByRole("button", {
@@ -1032,7 +1123,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Bóveda" }));
+    await goToSection(user, "Bóveda");
     await user.click(
       await screen.findByRole("button", {
         name: "Restaurar backup principal",
@@ -1054,7 +1145,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Materias" }));
+    await goToSection(user, "Materias");
 
     expect(
       await screen.findByRole("heading", {
@@ -1093,11 +1184,63 @@ describe("App con IPC de Tauri", () => {
     expect(await screen.findByText("Física I")).toBeInTheDocument();
   });
 
+  it("muestra el plan de estudios y marca una materia como aprobada", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await goToSection(user, "Materias");
+
+    expect(
+      await screen.findByRole("heading", { name: "Plan de estudios" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Ciclo básico" }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("0 de 1 aprobadas")).toBeInTheDocument();
+
+    const checkbox = screen.getByRole("checkbox", {
+      name: "Marcar «Análisis I» como aprobada",
+    });
+    expect(checkbox).not.toBeChecked();
+
+    api.listStudyPlanSubjects.mockResolvedValue([
+      { ...studyPlanSubject, approved: true },
+    ]);
+
+    await user.click(checkbox);
+
+    await waitFor(() =>
+      expect(api.setStudyPlanSubjectApproved).toHaveBeenCalledWith(
+        "plan-subject-1",
+        true,
+      ),
+    );
+    expect(await screen.findByText("1 de 1 aprobadas")).toBeInTheDocument();
+
+    const row = screen.getByText("Análisis I").closest("li");
+    expect(row).not.toBeNull();
+    const rowScope = within(row as HTMLElement);
+    await user.click(rowScope.getByRole("button", { name: "Editar" }));
+    const nameField = await screen.findByLabelText("Materia del plan");
+    await user.clear(nameField);
+    await user.type(nameField, "Análisis II");
+    await user.click(
+      screen.getByRole("button", { name: "Guardar materia del plan" }),
+    );
+
+    await waitFor(() =>
+      expect(api.updateStudyPlanSubject).toHaveBeenCalledWith(
+        "plan-subject-1",
+        expect.objectContaining({ name: "Análisis II", approved: true }),
+      ),
+    );
+  });
+
   it("carga la semana y registra asistencia desde Horario", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Horario" }));
+    await goToSection(user, "Horario");
 
     expect(
       await screen.findByRole("heading", {
@@ -1161,7 +1304,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Horario" }));
+    await goToSection(user, "Horario");
     await screen.findByRole("heading", { name: "Franjas horarias" });
 
     await user.click(screen.getByRole("button", { name: "Agregar franja" }));
@@ -1246,7 +1389,7 @@ describe("App con IPC de Tauri", () => {
     api.getSubjectGrade.mockResolvedValue(subjectGrade);
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Notas" }));
+    await goToSection(user, "Notas");
 
     expect(
       await screen.findByRole("heading", { name: "Notas", level: 1 }),
@@ -1264,7 +1407,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Tareas" }));
+    await goToSection(user, "Tareas");
     const search = await screen.findByPlaceholderText(
       "Buscar en título, descripción o etiquetas",
     );
@@ -1286,8 +1429,8 @@ describe("App con IPC de Tauri", () => {
     api.listTags.mockResolvedValue([examTag]);
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Tareas" }));
-    const tagFilter = await screen.findByLabelText("Etiqueta");
+    await goToSection(user, "Tareas");
+    await screen.findByLabelText("Etiqueta");
     api.searchTasks.mockResolvedValue([
       {
         ...pendingTask,
@@ -1297,7 +1440,7 @@ describe("App con IPC de Tauri", () => {
       },
     ]);
 
-    await user.selectOptions(tagFilter, "tag-1");
+    await selectCustomOption(user, "Etiqueta", "examen");
 
     await waitFor(() =>
       expect(api.searchTasks).toHaveBeenLastCalledWith({ tagId: "tag-1" }),
@@ -1311,7 +1454,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Exámenes" }));
+    await goToSection(user, "Exámenes");
 
     expect(
       await screen.findByRole("heading", { name: "Exámenes", level: 1 }),
@@ -1326,7 +1469,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Fortalezas" }));
+    await goToSection(user, "Fortalezas");
 
     expect(
       await screen.findByRole("heading", { name: "Fortalezas", level: 1 }),
@@ -1335,7 +1478,7 @@ describe("App con IPC de Tauri", () => {
       await screen.findByRole("heading", { name: "Matrices" }),
     ).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText("Autoevaluación"), "4");
+    await selectCustomOption(user, "Autoevaluación", "4");
     await user.type(screen.getByLabelText("Nota de autoevaluación"), "mejoró");
     await user.click(
       screen.getByRole("button", { name: "Guardar autoevaluación" }),
@@ -1349,10 +1492,7 @@ describe("App con IPC de Tauri", () => {
       ),
     );
 
-    await user.selectOptions(
-      screen.getByLabelText("Clasificación manual"),
-      "strength",
-    );
+    await selectCustomOption(user, "Clasificación manual", "Fortaleza");
     await user.type(
       screen.getByLabelText("Motivo del override"),
       "práctica extra",
@@ -1372,10 +1512,10 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Fortalezas" }));
+    await goToSection(user, "Fortalezas");
     await screen.findByRole("heading", { name: "Matrices" });
 
-    await user.selectOptions(screen.getByLabelText("Calidad del repaso"), "5");
+    await selectCustomOption(user, "Calidad del repaso", "5");
     await user.click(screen.getByRole("button", { name: "Registrar repaso" }));
 
     await waitFor(() =>
@@ -1388,7 +1528,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Estudio" }));
+    await goToSection(user, "Estudio");
 
     expect(
       await screen.findByRole("heading", { name: "Estudio", level: 1 }),
@@ -1430,9 +1570,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(
-      await screen.findByRole("button", { name: "Estadísticas" }),
-    );
+    await goToSection(user, "Estadísticas");
 
     expect(
       await screen.findByRole("heading", { name: "Estadísticas", level: 1 }),
@@ -1452,7 +1590,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
 
     expect(
       await screen.findByRole("heading", { name: "Ajustes", level: 1 }),
@@ -1493,7 +1631,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
     await user.click(
       await screen.findByRole("button", { name: "Visitar repositorio" }),
     );
@@ -1511,7 +1649,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
 
     expect(await screen.findByText(/instalación msix/i)).toBeInTheDocument();
     expect(
@@ -1530,7 +1668,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
 
     expect(
       await screen.findByRole("button", { name: "Buscar actualizaciones" }),
@@ -1545,7 +1683,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
 
     expect(
       await screen.findByText(/no tiene una clave pública de producción/i),
@@ -1566,7 +1704,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
 
     expect(
       await screen.findByText(/esta instalación es un snap/i),
@@ -1585,7 +1723,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
 
     expect(
       await screen.findByRole("heading", { name: "Notificaciones", level: 2 }),
@@ -1610,7 +1748,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
     await screen.findByRole("checkbox", { name: /activar recordatorios/i });
 
     await user.click(
@@ -1634,7 +1772,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
     const sound = await screen.findByRole("checkbox", {
       name: /sonido en los recordatorios/i,
     });
@@ -1653,7 +1791,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
     const background = await screen.findByRole("checkbox", {
       name: /mantener en segundo plano/i,
     });
@@ -1667,7 +1805,7 @@ describe("App con IPC de Tauri", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await goToSection(user, "Ajustes");
     await user.click(screen.getByRole("button", { name: "Claro" }));
 
     expect(document.documentElement.dataset.theme).toBe("light");

@@ -1,4 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { CustomSelect } from "../components/CustomSelect";
+import { DateField } from "../components/DateField";
 import { intlLocale, useTranslation } from "../lib/i18n";
 import {
   createSavedFilter,
@@ -622,55 +624,56 @@ export function TasksView({
                   placeholder={t("tasks.searchPlaceholder")}
                 />
               </label>
-              <label className="field">
+              <div className="field">
                 <span>{t("tasks.statusFilter")}</span>
-                <select
+                <CustomSelect
+                  ariaLabel={t("tasks.statusFilter")}
                   className="select-field"
                   value={filterStatus}
-                  onChange={(event) =>
-                    setFilterStatus(
-                      event.target.value as "" | "open" | TaskStatus,
-                    )
+                  onChange={(value) =>
+                    setFilterStatus(value as "" | "open" | TaskStatus)
                   }
-                >
-                  <option value="">{t("tasks.allStatuses")}</option>
-                  <option value="open">{t("tasks.statusOpen")}</option>
-                  <option value="pending">{t("tasks.statusPending")}</option>
-                  <option value="in_progress">
-                    {t("tasks.statuses.in_progress")}
-                  </option>
-                  <option value="done">{t("tasks.statusDone")}</option>
-                </select>
-              </label>
-              <label className="field">
+                  options={[
+                    { value: "", label: t("tasks.allStatuses") },
+                    { value: "open", label: t("tasks.statusOpen") },
+                    { value: "pending", label: t("tasks.statusPending") },
+                    {
+                      value: "in_progress",
+                      label: t("tasks.statuses.in_progress"),
+                    },
+                    { value: "done", label: t("tasks.statusDone") },
+                  ]}
+                />
+              </div>
+              <div className="field">
                 <span>{t("tasks.priorityFilter")}</span>
-                <select
+                <CustomSelect
+                  ariaLabel={t("tasks.priorityFilter")}
                   className="select-field"
                   value={filterPriority}
-                  onChange={(event) => setFilterPriority(event.target.value)}
-                >
-                  <option value="">{t("tasks.allPriorities")}</option>
-                  <option value="3">{t("tasks.priorities.urgent")}</option>
-                  <option value="2">{t("tasks.priorities.high")}</option>
-                  <option value="1">{t("tasks.priorities.medium")}</option>
-                  <option value="0">{t("tasks.priorities.low")}</option>
-                </select>
-              </label>
-              <label className="field">
+                  onChange={setFilterPriority}
+                  options={[
+                    { value: "", label: t("tasks.allPriorities") },
+                    { value: "3", label: t("tasks.priorities.urgent") },
+                    { value: "2", label: t("tasks.priorities.high") },
+                    { value: "1", label: t("tasks.priorities.medium") },
+                    { value: "0", label: t("tasks.priorities.low") },
+                  ]}
+                />
+              </div>
+              <div className="field">
                 <span>{t("tasks.tagFilter")}</span>
-                <select
+                <CustomSelect
+                  ariaLabel={t("tasks.tagFilter")}
                   className="select-field"
                   value={filterTagId}
-                  onChange={(event) => setFilterTagId(event.target.value)}
-                >
-                  <option value="">{t("tasks.allTags")}</option>
-                  {tags.map((tag) => (
-                    <option key={tag.id} value={tag.id}>
-                      {tag.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setFilterTagId}
+                  options={[
+                    { value: "", label: t("tasks.allTags") },
+                    ...tags.map((tag) => ({ value: tag.id, label: tag.name })),
+                  ]}
+                />
+              </div>
             </div>
 
             <div className="inline-form">
@@ -780,119 +783,92 @@ export function TasksView({
                     required
                   />
                 </label>
-                <label className="field">
+                <div className="field">
                   <span>{t("common.subject")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("common.subject")}
                     className="select-field"
                     value={form.subjectId}
-                    onChange={(event) =>
-                      setForm({ ...form, subjectId: event.target.value })
-                    }
-                  >
-                    <option value="">{t("common.noSubject")}</option>
-                    {subjects.map((subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
+                    onChange={(value) => setForm({ ...form, subjectId: value })}
+                    options={[
+                      { value: "", label: t("common.noSubject") },
+                      ...subjects.map((subject) => ({
+                        value: subject.id,
+                        label: subject.name,
+                      })),
+                    ]}
+                  />
+                </div>
+                <div className="field">
                   <span>{t("tasks.parentTask")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("tasks.parentTask")}
                     className="select-field"
                     value={form.parentTaskId}
-                    onChange={(event) =>
-                      setForm({ ...form, parentTaskId: event.target.value })
+                    onChange={(value) =>
+                      setForm({ ...form, parentTaskId: value })
                     }
-                  >
-                    <option value="">{t("common.noParent")}</option>
-                    {parentOptions.map((task) => (
-                      <option key={task.id} value={task.id}>
-                        {task.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
+                    options={[
+                      { value: "", label: t("common.noParent") },
+                      ...parentOptions.map((task) => ({
+                        value: task.id,
+                        label: task.title,
+                      })),
+                    ]}
+                  />
+                </div>
+                <div className="field">
                   <span>{t("common.type")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("common.type")}
                     className="select-field"
                     value={form.taskType}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        taskType: event.target.value as TaskType,
-                      })
+                    onChange={(value) =>
+                      setForm({ ...form, taskType: value as TaskType })
                     }
-                  >
-                    {Object.entries(typeLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {t(label)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
+                    options={Object.entries(typeLabels).map(
+                      ([value, label]) => ({ value, label: t(label) }),
+                    )}
+                  />
+                </div>
+                <div className="field">
                   <span>{t("tasks.priorityFilter")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("tasks.priorityFilter")}
                     className="select-field"
                     value={form.priority}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        priority: event.target.value as TaskPriority,
-                      })
+                    onChange={(value) =>
+                      setForm({ ...form, priority: value as TaskPriority })
                     }
-                  >
-                    {Object.entries(priorityLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {t(label)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
+                    options={Object.entries(priorityLabels).map(
+                      ([value, label]) => ({ value, label: t(label) }),
+                    )}
+                  />
+                </div>
+                <div className="field">
                   <span>{t("tasks.statusFilter")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("tasks.statusFilter")}
                     className="select-field"
                     value={form.status}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        status: event.target.value as TaskStatus,
-                      })
+                    onChange={(value) =>
+                      setForm({ ...form, status: value as TaskStatus })
                     }
-                  >
-                    {Object.entries(statusLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {t(label)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>{t("common.start")}</span>
-                  <input
-                    className="text-field"
-                    type="date"
-                    value={form.startDate}
-                    onChange={(event) =>
-                      setForm({ ...form, startDate: event.target.value })
-                    }
+                    options={Object.entries(statusLabels).map(
+                      ([value, label]) => ({ value, label: t(label) }),
+                    )}
                   />
-                </label>
-                <label className="field">
-                  <span>{t("common.deadline")}</span>
-                  <input
-                    className="text-field"
-                    type="date"
-                    value={form.dueDate}
-                    onChange={(event) =>
-                      setForm({ ...form, dueDate: event.target.value })
-                    }
-                  />
-                </label>
+                </div>
+                <DateField
+                  label={t("common.start")}
+                  value={form.startDate}
+                  onChange={(startDate) => setForm({ ...form, startDate })}
+                />
+                <DateField
+                  label={t("common.deadline")}
+                  value={form.dueDate}
+                  onChange={(dueDate) => setForm({ ...form, dueDate })}
+                />
                 <label className="field narrow">
                   <span>{t("common.time")}</span>
                   <input
@@ -939,27 +915,24 @@ export function TasksView({
                     }
                   />
                 </label>
-                <label className="field">
+                <div className="field">
                   <span>{t("tasks.recurrenceLabel")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("tasks.recurrenceLabel")}
                     className="select-field"
                     value={form.recurrenceKind}
                     disabled={!form.recurring}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setForm({
                         ...form,
-                        recurrenceKind: event.target
-                          .value as TaskRecurrenceKind,
+                        recurrenceKind: value as TaskRecurrenceKind,
                       })
                     }
-                  >
-                    {Object.entries(recurrenceLabels).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {t(label)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    options={Object.entries(recurrenceLabels).map(
+                      ([value, label]) => ({ value, label: t(label) }),
+                    )}
+                  />
+                </div>
                 <label className="field narrow">
                   <span>{t("tasks.every")}</span>
                   <input
@@ -976,18 +949,15 @@ export function TasksView({
                     }
                   />
                 </label>
-                <label className="field">
-                  <span>{t("tasks.until")}</span>
-                  <input
-                    className="text-field"
-                    type="date"
-                    value={form.recurrenceUntil}
-                    disabled={!form.recurring}
-                    onChange={(event) =>
-                      setForm({ ...form, recurrenceUntil: event.target.value })
-                    }
-                  />
-                </label>
+                <DateField
+                  label={t("tasks.until")}
+                  value={form.recurrenceUntil}
+                  onChange={(recurrenceUntil) =>
+                    setForm({ ...form, recurrenceUntil })
+                  }
+                  fieldClassName="field"
+                  disabled={!form.recurring}
+                />
                 <label className="field">
                   <span>{t("tasks.important")}</span>
                   <input

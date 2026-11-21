@@ -22,13 +22,13 @@ use serde::{Deserialize, Serialize};
 use study_planner_core::{
     AcademicYear, AttendanceRecord, ClassException, ClassSlot, Exam, ExamTopic, GradeCategory,
     GradeEntry, GradeScale, Holiday, ReviewItem, RotationConfig, SCHEMA_VERSION, SavedFilter,
-    ScheduleOccurrence, SelfAssessment, StrengthOverride, StudySession, Subject, SubjectGrade, Tag,
-    Task, TaskFilter, Term, Topic,
+    ScheduleOccurrence, SelfAssessment, StrengthOverride, StudyCycle, StudyPlanSubject,
+    StudySession, Subject, SubjectGrade, Tag, Task, TaskFilter, Term, Topic,
 };
 use study_planner_store::{
     BackupReport, ClassSlotInput, ExamInput, GradeCategoryInput, GradeEntryInput, GradeScaleInput,
-    RotationInput, Store, StudyPriorityView, StudyStats, SubjectInput, TaskInput, TermInput,
-    TopicInput, TopicStudy, UndoEntry, WeekSchedule,
+    RotationInput, Store, StudyCycleInput, StudyPlanSubjectInput, StudyPriorityView, StudyStats,
+    SubjectInput, TaskInput, TermInput, TopicInput, TopicStudy, UndoEntry, WeekSchedule,
 };
 use study_planner_transfer::{
     ExportReport, ImportMode, export_to_path, import_from_path, is_empty_vault,
@@ -1788,6 +1788,111 @@ pub fn delete_subject(id: String, state: State<'_, AppState>) -> Result<(), Stri
 }
 
 // ---------------------------------------------------------------------------
+// Plan de estudios (ciclos y materias aprobadas)
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn list_study_cycles(state: State<'_, AppState>) -> Result<Vec<StudyCycle>, String> {
+    with_store(&state, |store| {
+        store.list_study_cycles().map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn create_study_cycle(
+    input: StudyCycleInput,
+    state: State<'_, AppState>,
+) -> Result<StudyCycle, String> {
+    with_store(&state, |store| {
+        store
+            .create_study_cycle(&input)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn update_study_cycle(
+    id: String,
+    input: StudyCycleInput,
+    state: State<'_, AppState>,
+) -> Result<StudyCycle, String> {
+    with_store(&state, |store| {
+        store
+            .update_study_cycle(&id, &input)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn delete_study_cycle(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    with_store(&state, |store| {
+        store
+            .delete_study_cycle(&id)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn list_study_plan_subjects(
+    cycle_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<StudyPlanSubject>, String> {
+    with_store(&state, |store| {
+        store
+            .list_study_plan_subjects(cycle_id.as_deref())
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn create_study_plan_subject(
+    cycle_id: String,
+    input: StudyPlanSubjectInput,
+    state: State<'_, AppState>,
+) -> Result<StudyPlanSubject, String> {
+    with_store(&state, |store| {
+        store
+            .create_study_plan_subject(&cycle_id, &input)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn update_study_plan_subject(
+    id: String,
+    input: StudyPlanSubjectInput,
+    state: State<'_, AppState>,
+) -> Result<StudyPlanSubject, String> {
+    with_store(&state, |store| {
+        store
+            .update_study_plan_subject(&id, &input)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn set_study_plan_subject_approved(
+    id: String,
+    approved: bool,
+    state: State<'_, AppState>,
+) -> Result<StudyPlanSubject, String> {
+    with_store(&state, |store| {
+        store
+            .set_study_plan_subject_approved(&id, approved)
+            .map_err(|error| error.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn delete_study_plan_subject(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    with_store(&state, |store| {
+        store
+            .delete_study_plan_subject(&id)
+            .map_err(|error| error.to_string())
+    })
+}
+
+// ---------------------------------------------------------------------------
 // Horario, rotaciones, feriados, excepciones y asistencia
 // ---------------------------------------------------------------------------
 
@@ -2229,6 +2334,37 @@ pub fn get_study_stats(
     with_store(&state, |store| {
         store
             .study_stats(from.as_deref(), &today)
+            .map_err(|error| error.to_string())
+    })
+}
+
+/// Idioma de la interfaz guardado en la bóveda, si existe.
+#[tauri::command]
+pub fn get_app_locale(state: State<'_, AppState>) -> Result<Option<String>, String> {
+    state.with_store_opt(|store| {
+        let Some(store) = store else {
+            return Ok(None);
+        };
+        let raw = store
+            .get_setting("locale")
+            .map_err(|error| error.to_string())?;
+        Ok(raw.and_then(|value| serde_json::from_str::<String>(&value).ok()))
+    })
+}
+
+/// Guarda el idioma de la interfaz en la bóveda abierta.
+#[tauri::command]
+pub fn set_app_locale(locale: String, state: State<'_, AppState>) -> Result<(), String> {
+    if !matches!(locale.as_str(), "en" | "es") {
+        return Err("idioma no soportado: usá «en» o «es»".to_string());
+    }
+    state.with_store_opt(|store| {
+        let Some(store) = store else {
+            return Ok(());
+        };
+        let value = serde_json::to_string(&locale).map_err(|error| error.to_string())?;
+        store
+            .set_setting("locale", &value, "portable")
             .map_err(|error| error.to_string())
     })
 }

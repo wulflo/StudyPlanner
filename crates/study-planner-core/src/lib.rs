@@ -17,11 +17,12 @@ pub use academic::{
     AcademicYear, AttendanceRecord, AttendanceStatus, AttendanceSummary, ClassException, ClassSlot,
     DEFAULT_SUBJECT_COLOR, ExceptionKind, Holiday, NAME_MAX_CHARS, OccurrenceKind, Recurrence,
     RotationConfig, RotationMode, SHORT_TEXT_MAX_CHARS, ScheduleOccurrence, ScheduleSlot,
-    SlotOverlap, Subject, Term, TermKind, add_days, attendance_summary, date_within, days_between,
-    find_overlaps, minutes_to_time, next_class, normalize_color, normalize_date, normalize_name,
-    normalize_optional_short, normalize_optional_text, normalize_time, parse_date, slot_occurs_on,
-    time_to_minutes, validate_basis_points, validate_date_range, validate_time_range,
-    validate_weekday, week_occurrences, week_start_of, weekday_of, weekdays_between,
+    SlotOverlap, StudyCycle, StudyPlanSubject, Subject, Term, TermKind, add_days,
+    attendance_summary, date_within, days_between, find_overlaps, minutes_to_time, next_class,
+    normalize_color, normalize_date, normalize_name, normalize_optional_short,
+    normalize_optional_text, normalize_time, parse_date, slot_occurs_on, time_to_minutes,
+    validate_basis_points, validate_date_range, validate_time_range, validate_weekday,
+    week_occurrences, week_start_of, weekday_of, weekdays_between,
 };
 pub use exam::{
     EXAM_TITLE_MAX_CHARS, Exam, ExamResultStatus, ExamTopic, TOPIC_NAME_MAX_CHARS, Topic,
@@ -59,7 +60,7 @@ pub const APP_NAME: &str = "Study Planner";
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Versión del esquema SQLite. Se incrementa con cada migración.
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 4;
 
 /// Versión del formato de exportación `.txt`.
 pub const EXPORT_FORMAT_VERSION: u32 = 1;

@@ -654,6 +654,37 @@ export interface Subject {
   updatedAt: string;
 }
 
+export interface StudyCycle {
+  id: string;
+  name: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudyPlanSubject {
+  id: string;
+  cycleId: string;
+  name: string;
+  code: string | null;
+  approved: boolean;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudyCycleInput {
+  name: string;
+  position: number;
+}
+
+export interface StudyPlanSubjectInput {
+  name: string;
+  code: string | null;
+  approved: boolean;
+  position: number;
+}
+
 export interface ClassSlot {
   id: string;
   subjectId: string;
@@ -876,6 +907,64 @@ export async function updateSubject(
 
 export async function deleteSubject(id: string): Promise<void> {
   return invoke<void>("delete_subject", { id });
+}
+
+export async function listStudyCycles(): Promise<StudyCycle[]> {
+  return invoke<StudyCycle[]>("list_study_cycles");
+}
+
+export async function createStudyCycle(
+  input: StudyCycleInput,
+): Promise<StudyCycle> {
+  return invoke<StudyCycle>("create_study_cycle", { input });
+}
+
+export async function updateStudyCycle(
+  id: string,
+  input: StudyCycleInput,
+): Promise<StudyCycle> {
+  return invoke<StudyCycle>("update_study_cycle", { id, input });
+}
+
+export async function deleteStudyCycle(id: string): Promise<void> {
+  return invoke<void>("delete_study_cycle", { id });
+}
+
+export async function listStudyPlanSubjects(
+  cycleId: string | null,
+): Promise<StudyPlanSubject[]> {
+  return invoke<StudyPlanSubject[]>("list_study_plan_subjects", { cycleId });
+}
+
+export async function createStudyPlanSubject(
+  cycleId: string,
+  input: StudyPlanSubjectInput,
+): Promise<StudyPlanSubject> {
+  return invoke<StudyPlanSubject>("create_study_plan_subject", {
+    cycleId,
+    input,
+  });
+}
+
+export async function updateStudyPlanSubject(
+  id: string,
+  input: StudyPlanSubjectInput,
+): Promise<StudyPlanSubject> {
+  return invoke<StudyPlanSubject>("update_study_plan_subject", { id, input });
+}
+
+export async function setStudyPlanSubjectApproved(
+  id: string,
+  approved: boolean,
+): Promise<StudyPlanSubject> {
+  return invoke<StudyPlanSubject>("set_study_plan_subject_approved", {
+    id,
+    approved,
+  });
+}
+
+export async function deleteStudyPlanSubject(id: string): Promise<void> {
+  return invoke<void>("delete_study_plan_subject", { id });
 }
 
 export async function listClassSlots(termId: string): Promise<ClassSlot[]> {
@@ -1391,6 +1480,14 @@ export async function setNotificationsSound(
   enabled: boolean,
 ): Promise<NotificationStatus> {
   return invoke<NotificationStatus>("set_notifications_sound", { enabled });
+}
+
+export async function getAppLocale(): Promise<string | null> {
+  return invoke<string | null>("get_app_locale");
+}
+
+export async function setAppLocale(locale: "en" | "es"): Promise<void> {
+  return invoke<void>("set_app_locale", { locale });
 }
 
 export async function getBackgroundStatus(): Promise<BackgroundStatus> {

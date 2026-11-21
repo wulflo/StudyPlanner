@@ -6,8 +6,9 @@
 use rusqlite::{OptionalExtension, Row, params};
 use serde::Deserialize;
 use study_planner_core::{
-    AcademicYear, Subject, Term, TermKind, new_id, normalize_color, normalize_date, normalize_name,
-    normalize_optional_short, normalize_optional_text, validate_basis_points, validate_date_range,
+    AcademicYear, StudyCycle, StudyPlanSubject, Subject, Term, TermKind, new_id, normalize_color,
+    normalize_date, normalize_name, normalize_optional_short, normalize_optional_text,
+    validate_basis_points, validate_date_range,
 };
 
 use crate::{Store, StoreError};
@@ -16,6 +17,9 @@ const YEAR_COLUMNS: &str = "id, name, start_date, end_date, created_at, updated_
 const TERM_COLUMNS: &str = "id, year_id, name, kind, start_date, end_date, created_at, updated_at";
 const SUBJECT_COLUMNS: &str = "id, term_id, name, code, color, teacher, room, credits, \
      goal_score_cp, attendance_min_bp, created_at, updated_at";
+const STUDY_CYCLE_COLUMNS: &str = "id, name, position, created_at, updated_at";
+const STUDY_PLAN_SUBJECT_COLUMNS: &str =
+    "id, cycle_id, name, code, approved, position, created_at, updated_at";
 
 /// Datos editables de un término.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -38,6 +42,24 @@ pub struct SubjectInput {
     pub room: Option<String>,
     pub credits: Option<i64>,
     pub attendance_min_bp: Option<i64>,
+}
+
+/// Datos editables de un ciclo del plan de estudios.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StudyCycleInput {
+    pub name: String,
+    pub position: i64,
+}
+
+/// Datos editables de una materia del plan de estudios.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StudyPlanSubjectInput {
+    pub name: String,
+    pub code: Option<String>,
+    pub approved: bool,
+    pub position: i64,
 }
 
 impl Store {
@@ -383,6 +405,235 @@ impl Store {
         })
     }
 
+    /// Lista los ciclos vivos del plan de estudios, en orden.
+    pub fn list_study_cycles(&self) -> Result<Vec<StudyCycle>, StoreError> {
+        let mut statement = self.connection().prepare(&format!(
+            "SELECT {STUDY_CYCLE_COLUMNS}
+             FROM study_cycle
+             WHERE deleted_at IS NULL
+             ORDER BY position, name"
+        ))?;
+        let rows = statement.query_map([], study_cycle_from_row)?;
+        let mut cycles = Vec::new();
+        for row in rows {
+            cycles.push(row?);
+        }
+        Ok(cycles)
+    }
+
+    /// Crea un ciclo del plan de estudios.
+    pub fn create_study_cycle(&self, input: &StudyCycleInput) -> Result<StudyCycle, StoreError> {
+        let name = normalize_name(&input.name).map_err(StoreError::InvalidAcademic)?;
+        let position = validate_position(input.position)?;
+        let id = new_id();
+
+        self.connection().execute(
+            "INSERT INTO study_cycle (id, name, position) VALUES (?1, ?2, ?3)",
+            params![id, name, position],
+        )?;
+
+        self.get_study_cycle(&id)?
+            .ok_or(StoreError::StudyCycleNotFound)
+    }
+
+    /// Actualiza un ciclo vivo del plan de estudios.
+    pub fn update_study_cycle(
+        &self,
+        id: &str,
+        input: &StudyCycleInput,
+    ) -> Result<StudyCycle, StoreError> {
+        let name = normalize_name(&input.name).map_err(StoreError::InvalidAcademic)?;
+        let position = validate_position(input.position)?;
+
+        let changed = self.connection().execute(
+            "UPDATE study_cycle
+             SET name = ?1, position = ?2,
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+             WHERE id = ?3 AND deleted_at IS NULL",
+            params![name, position, id],
+        )?;
+
+        if changed == 0 {
+            return Err(StoreError::StudyCycleNotFound);
+        }
+
+        self.get_study_cycle(id)?
+            .ok_or(StoreError::StudyCycleNotFound)
+    }
+
+    /// Borra lógicamente un ciclo sin materias vivas en el plan.
+    pub fn delete_study_cycle(&self, id: &str) -> Result<(), StoreError> {
+        self.with_transaction(|| {
+            self.ensure_no_live_rows(
+                "SELECT count(*) FROM study_plan_subject
+                 WHERE cycle_id = ?1 AND deleted_at IS NULL",
+                id,
+                "El ciclo todavía tiene materias del plan; borralas primero.",
+            )?;
+
+            let changed = self.connection().execute(
+                "UPDATE study_cycle
+                 SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                 WHERE id = ?1 AND deleted_at IS NULL",
+                params![id],
+            )?;
+
+            if changed == 0 {
+                return Err(StoreError::StudyCycleNotFound);
+            }
+            Ok(())
+        })
+    }
+
+    /// Lista las materias vivas del plan, opcionalmente filtradas por ciclo.
+    pub fn list_study_plan_subjects(
+        &self,
+        cycle_id: Option<&str>,
+    ) -> Result<Vec<StudyPlanSubject>, StoreError> {
+        let mut statement = self.connection().prepare(&format!(
+            "SELECT {STUDY_PLAN_SUBJECT_COLUMNS}
+             FROM study_plan_subject
+             WHERE deleted_at IS NULL AND (?1 IS NULL OR cycle_id = ?1)
+             ORDER BY position, name"
+        ))?;
+        let rows = statement.query_map(params![cycle_id], study_plan_subject_from_row)?;
+        let mut subjects = Vec::new();
+        for row in rows {
+            subjects.push(row?);
+        }
+        Ok(subjects)
+    }
+
+    /// Crea una materia dentro de un ciclo existente.
+    pub fn create_study_plan_subject(
+        &self,
+        cycle_id: &str,
+        input: &StudyPlanSubjectInput,
+    ) -> Result<StudyPlanSubject, StoreError> {
+        self.get_study_cycle(cycle_id)?
+            .ok_or(StoreError::StudyCycleNotFound)?;
+        let values = validate_study_plan_subject_input(input)?;
+        let id = new_id();
+
+        self.connection().execute(
+            "INSERT INTO study_plan_subject
+               (id, cycle_id, name, code, approved, position)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                id,
+                cycle_id,
+                values.name,
+                values.code,
+                values.approved,
+                values.position,
+            ],
+        )?;
+
+        self.get_study_plan_subject(&id)?
+            .ok_or(StoreError::StudyPlanSubjectNotFound)
+    }
+
+    /// Actualiza una materia viva del plan de estudios.
+    pub fn update_study_plan_subject(
+        &self,
+        id: &str,
+        input: &StudyPlanSubjectInput,
+    ) -> Result<StudyPlanSubject, StoreError> {
+        let values = validate_study_plan_subject_input(input)?;
+
+        let changed = self.connection().execute(
+            "UPDATE study_plan_subject
+             SET name = ?1, code = ?2, approved = ?3, position = ?4,
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+             WHERE id = ?5 AND deleted_at IS NULL",
+            params![
+                values.name,
+                values.code,
+                values.approved,
+                values.position,
+                id,
+            ],
+        )?;
+
+        if changed == 0 {
+            return Err(StoreError::StudyPlanSubjectNotFound);
+        }
+
+        self.get_study_plan_subject(id)?
+            .ok_or(StoreError::StudyPlanSubjectNotFound)
+    }
+
+    /// Marca o desmarca una materia del plan como aprobada.
+    pub fn set_study_plan_subject_approved(
+        &self,
+        id: &str,
+        approved: bool,
+    ) -> Result<StudyPlanSubject, StoreError> {
+        let changed = self.connection().execute(
+            "UPDATE study_plan_subject
+             SET approved = ?1,
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+             WHERE id = ?2 AND deleted_at IS NULL",
+            params![approved, id],
+        )?;
+
+        if changed == 0 {
+            return Err(StoreError::StudyPlanSubjectNotFound);
+        }
+
+        self.get_study_plan_subject(id)?
+            .ok_or(StoreError::StudyPlanSubjectNotFound)
+    }
+
+    /// Borra lógicamente una materia del plan de estudios.
+    pub fn delete_study_plan_subject(&self, id: &str) -> Result<(), StoreError> {
+        let changed = self.connection().execute(
+            "UPDATE study_plan_subject
+             SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+             WHERE id = ?1 AND deleted_at IS NULL",
+            params![id],
+        )?;
+
+        if changed == 0 {
+            return Err(StoreError::StudyPlanSubjectNotFound);
+        }
+        Ok(())
+    }
+
+    fn get_study_cycle(&self, id: &str) -> Result<Option<StudyCycle>, StoreError> {
+        let cycle = self
+            .connection()
+            .query_row(
+                &format!(
+                    "SELECT {STUDY_CYCLE_COLUMNS}
+                     FROM study_cycle
+                     WHERE id = ?1 AND deleted_at IS NULL"
+                ),
+                params![id],
+                study_cycle_from_row,
+            )
+            .optional()?;
+        Ok(cycle)
+    }
+
+    fn get_study_plan_subject(&self, id: &str) -> Result<Option<StudyPlanSubject>, StoreError> {
+        let subject = self
+            .connection()
+            .query_row(
+                &format!(
+                    "SELECT {STUDY_PLAN_SUBJECT_COLUMNS}
+                     FROM study_plan_subject
+                     WHERE id = ?1 AND deleted_at IS NULL"
+                ),
+                params![id],
+                study_plan_subject_from_row,
+            )
+            .optional()?;
+        Ok(subject)
+    }
+
     fn get_academic_year(&self, id: &str) -> Result<Option<AcademicYear>, StoreError> {
         let year = self
             .connection()
@@ -534,6 +785,38 @@ fn validate_subject_input(input: &SubjectInput) -> Result<ValidSubject, StoreErr
     })
 }
 
+struct ValidStudyPlanSubject {
+    name: String,
+    code: Option<String>,
+    approved: bool,
+    position: i64,
+}
+
+fn validate_position(position: i64) -> Result<i64, StoreError> {
+    if position < 0 {
+        return Err(StoreError::InvalidAcademic(
+            "La posición no puede ser negativa.",
+        ));
+    }
+    Ok(position)
+}
+
+fn validate_study_plan_subject_input(
+    input: &StudyPlanSubjectInput,
+) -> Result<ValidStudyPlanSubject, StoreError> {
+    let name = normalize_name(&input.name).map_err(StoreError::InvalidAcademic)?;
+    let code = normalize_optional_short(input.code.as_deref().unwrap_or_default())
+        .map_err(StoreError::InvalidAcademic)?;
+    let position = validate_position(input.position)?;
+
+    Ok(ValidStudyPlanSubject {
+        name,
+        code,
+        approved: input.approved,
+        position,
+    })
+}
+
 fn year_from_row(row: &Row<'_>) -> rusqlite::Result<AcademicYear> {
     Ok(AcademicYear {
         id: row.get(0)?,
@@ -577,6 +860,29 @@ fn subject_from_row(row: &Row<'_>) -> rusqlite::Result<Subject> {
     })
 }
 
+fn study_cycle_from_row(row: &Row<'_>) -> rusqlite::Result<StudyCycle> {
+    Ok(StudyCycle {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        position: row.get(2)?,
+        created_at: row.get(3)?,
+        updated_at: row.get(4)?,
+    })
+}
+
+fn study_plan_subject_from_row(row: &Row<'_>) -> rusqlite::Result<StudyPlanSubject> {
+    Ok(StudyPlanSubject {
+        id: row.get(0)?,
+        cycle_id: row.get(1)?,
+        name: row.get(2)?,
+        code: row.get(3)?,
+        approved: row.get(4)?,
+        position: row.get(5)?,
+        created_at: row.get(6)?,
+        updated_at: row.get(7)?,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -616,6 +922,80 @@ mod tests {
                 },
             )
             .unwrap()
+    }
+
+    #[test]
+    fn manages_study_plan_cycles_and_approved_subjects() {
+        let store = migrated_store();
+        let cycle = store
+            .create_study_cycle(&StudyCycleInput {
+                name: "  Ciclo 1  ".to_string(),
+                position: 0,
+            })
+            .unwrap();
+        assert_eq!(cycle.name, "Ciclo 1");
+
+        let subject = store
+            .create_study_plan_subject(
+                &cycle.id,
+                &StudyPlanSubjectInput {
+                    name: "  Análisis I  ".to_string(),
+                    code: Some(" MAT-201 ".to_string()),
+                    approved: false,
+                    position: 0,
+                },
+            )
+            .unwrap();
+        assert_eq!(subject.name, "Análisis I");
+        assert_eq!(subject.code.as_deref(), Some("MAT-201"));
+        assert!(!subject.approved);
+
+        let approved = store
+            .set_study_plan_subject_approved(&subject.id, true)
+            .unwrap();
+        assert!(approved.approved);
+        assert_eq!(store.list_study_plan_subjects(None).unwrap().len(), 1);
+        assert_eq!(
+            store
+                .list_study_plan_subjects(Some(&cycle.id))
+                .unwrap()
+                .len(),
+            1
+        );
+
+        assert!(matches!(
+            store.delete_study_cycle(&cycle.id).unwrap_err(),
+            StoreError::Conflict(_)
+        ));
+
+        let updated = store
+            .update_study_cycle(
+                &cycle.id,
+                &StudyCycleInput {
+                    name: "Ciclo A".to_string(),
+                    position: 2,
+                },
+            )
+            .unwrap();
+        assert_eq!(updated.name, "Ciclo A");
+        assert_eq!(updated.position, 2);
+
+        store.delete_study_plan_subject(&subject.id).unwrap();
+        store.delete_study_cycle(&cycle.id).unwrap();
+        assert!(store.list_study_cycles().unwrap().is_empty());
+        assert!(store.list_study_plan_subjects(None).unwrap().is_empty());
+    }
+
+    #[test]
+    fn rejects_negative_study_plan_positions() {
+        let store = migrated_store();
+        let error = store
+            .create_study_cycle(&StudyCycleInput {
+                name: "Ciclo".to_string(),
+                position: -1,
+            })
+            .unwrap_err();
+        assert!(matches!(error, StoreError::InvalidAcademic(_)));
     }
 
     #[test]

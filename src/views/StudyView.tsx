@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
+import { CustomSelect } from "../components/CustomSelect";
 import { intlLocale, useTranslation } from "../lib/i18n";
 import {
   deleteStudySession,
@@ -430,23 +431,20 @@ export function StudyView({
                 </div>
               ) : (
                 <div className="inline-form">
-                  <label className="field narrow">
+                  <div className="field narrow">
                     <span>{t("schedule.mode")}</span>
-                    <select
+                    <CustomSelect
                       className="select-field"
-                      aria-label={t("study.studyModeAria")}
+                      ariaLabel={t("study.studyModeAria")}
                       value={mode}
-                      onChange={(event) =>
-                        setMode(event.target.value as StudySessionMode)
-                      }
-                    >
-                      <option value="pomodoro">
-                        {t("study.mode.pomodoro")}
-                      </option>
-                      <option value="free">{t("study.mode.free")}</option>
-                      <option value="review">{t("study.mode.review")}</option>
-                    </select>
-                  </label>
+                      onChange={(value) => setMode(value as StudySessionMode)}
+                      options={[
+                        { value: "pomodoro", label: t("study.mode.pomodoro") },
+                        { value: "free", label: t("study.mode.free") },
+                        { value: "review", label: t("study.mode.review") },
+                      ]}
+                    />
+                  </div>
                   <label className="field narrow">
                     <span>{t("study.minutes")}</span>
                     <input
@@ -459,38 +457,38 @@ export function StudyView({
                       onChange={(event) => setPlanned(event.target.value)}
                     />
                   </label>
-                  <label className="field">
+                  <div className="field">
                     <span>{t("common.subject")}</span>
-                    <select
+                    <CustomSelect
                       className="select-field"
-                      aria-label={t("study.sessionSubjectAria")}
+                      ariaLabel={t("study.sessionSubjectAria")}
                       value={subjectId}
-                      onChange={(event) => setSubjectId(event.target.value)}
-                    >
-                      <option value="">{t("common.noSubject")}</option>
-                      {subjects.map((subject) => (
-                        <option key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
+                      onChange={setSubjectId}
+                      options={[
+                        { value: "", label: t("common.noSubject") },
+                        ...subjects.map((subject) => ({
+                          value: subject.id,
+                          label: subject.name,
+                        })),
+                      ]}
+                    />
+                  </div>
+                  <div className="field">
                     <span>{t("study.topicOptional")}</span>
-                    <select
+                    <CustomSelect
                       className="select-field"
-                      aria-label={t("study.sessionTopicAria")}
+                      ariaLabel={t("study.sessionTopicAria")}
                       value={topicId}
-                      onChange={(event) => setTopicId(event.target.value)}
-                    >
-                      <option value="">{t("common.noTopic")}</option>
-                      {topics.map((topic) => (
-                        <option key={topic.id} value={topic.id}>
-                          {topic.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      onChange={setTopicId}
+                      options={[
+                        { value: "", label: t("common.noTopic") },
+                        ...topics.map((topic) => ({
+                          value: topic.id,
+                          label: topic.name,
+                        })),
+                      ]}
+                    />
+                  </div>
                   <button
                     type="button"
                     className="button filled"

@@ -1,5 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Trans } from "react-i18next";
+import { CustomSelect } from "../components/CustomSelect";
+import { DateField } from "../components/DateField";
 import { useTranslation } from "../lib/i18n";
 import {
   createGradeCategory,
@@ -391,27 +393,26 @@ export function GradesView({
         <>
           <section className="academic-panel">
             <div className="inline-form">
-              <label className="field">
+              <div className="field">
                 <span>{t("common.subject")}</span>
-                <select
+                <CustomSelect
+                  ariaLabel={t("common.subject")}
                   className="select-field"
                   value={subjectId}
-                  onChange={(event) => {
-                    setSubjectId(event.target.value);
+                  onChange={(value) => {
+                    setSubjectId(value);
                     setCategoryForm((current) => ({
                       ...current,
                       scaleId: "",
                     }));
                     setEntryForm((current) => ({ ...current, categoryId: "" }));
                   }}
-                >
-                  {subjects.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={subjects.map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                  }))}
+                />
+              </div>
               <div className="grade-summary">
                 <span className="eyebrow">{t("grades.finalAverage")}</span>
                 <strong>
@@ -431,6 +432,22 @@ export function GradesView({
                       ? t("grades.notApproved")
                       : ""}
                 </span>
+                {grade?.finalBp !== null && grade?.finalBp !== undefined ? (
+                  <div
+                    className="bar-track"
+                    role="progressbar"
+                    aria-label={t("grades.finalAverage")}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(grade.finalBp / 100)}
+                  >
+                    <span
+                      style={{
+                        width: `${Math.max(0, Math.min(100, grade.finalBp / 100))}%`,
+                      }}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
           </section>
@@ -657,26 +674,24 @@ export function GradesView({
                   placeholder={t("grades.categoryNamePlaceholder")}
                 />
               </label>
-              <label className="field">
+              <div className="field">
                 <span>{t("grades.scale")}</span>
-                <select
+                <CustomSelect
+                  ariaLabel={t("grades.scale")}
                   className="select-field"
                   value={categoryForm.scaleId}
-                  onChange={(event) =>
-                    setCategoryForm({
-                      ...categoryForm,
-                      scaleId: event.target.value,
-                    })
+                  onChange={(value) =>
+                    setCategoryForm({ ...categoryForm, scaleId: value })
                   }
-                >
-                  <option value="">{t("grades.chooseScale")}</option>
-                  {scales.map((scale) => (
-                    <option key={scale.id} value={scale.id}>
-                      {scale.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={[
+                    { value: "", label: t("grades.chooseScale") },
+                    ...scales.map((scale) => ({
+                      value: scale.id,
+                      label: scale.name,
+                    })),
+                  ]}
+                />
+              </div>
               <label className="field narrow">
                 <span>{t("grades.weight")}</span>
                 <input
@@ -768,26 +783,24 @@ export function GradesView({
                   placeholder={t("common.title")}
                 />
               </label>
-              <label className="field">
+              <div className="field">
                 <span>{t("grades.category")}</span>
-                <select
+                <CustomSelect
+                  ariaLabel={t("grades.category")}
                   className="select-field"
                   value={entryForm.categoryId}
-                  onChange={(event) =>
-                    setEntryForm({
-                      ...entryForm,
-                      categoryId: event.target.value,
-                    })
+                  onChange={(value) =>
+                    setEntryForm({ ...entryForm, categoryId: value })
                   }
-                >
-                  <option value="">{t("grades.chooseCategory")}</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={[
+                    { value: "", label: t("grades.chooseCategory") },
+                    ...categories.map((category) => ({
+                      value: category.id,
+                      label: category.name,
+                    })),
+                  ]}
+                />
+              </div>
               <label className="field narrow">
                 <span>{t("exams.score")}</span>
                 <input
@@ -825,17 +838,11 @@ export function GradesView({
                   placeholder={t("common.optional")}
                 />
               </label>
-              <label className="field">
-                <span>{t("common.date")}</span>
-                <input
-                  className="text-field"
-                  type="date"
-                  value={entryForm.date}
-                  onChange={(event) =>
-                    setEntryForm({ ...entryForm, date: event.target.value })
-                  }
-                />
-              </label>
+              <DateField
+                label={t("common.date")}
+                value={entryForm.date}
+                onChange={(date) => setEntryForm({ ...entryForm, date })}
+              />
               <button
                 type="submit"
                 className="button tonal"

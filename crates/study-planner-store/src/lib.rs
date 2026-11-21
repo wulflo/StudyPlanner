@@ -26,7 +26,7 @@ mod undo;
 #[cfg(test)]
 mod tests_support;
 
-pub use academic::{SubjectInput, TermInput};
+pub use academic::{StudyCycleInput, StudyPlanSubjectInput, SubjectInput, TermInput};
 pub use backup::BackupReport;
 pub use exams::{ExamInput, TopicInput};
 pub use grades::{GradeCategoryInput, GradeEntryInput, GradeScaleInput};
@@ -46,11 +46,16 @@ pub use undo::{UNDO_TTL_MINUTES, UndoEntry};
 const INITIAL_SQL: &str = include_str!("../migrations/0001_initial.sql");
 const PARTIAL_UNIQUE_INDEXES_SQL: &str =
     include_str!("../migrations/0002_partial_unique_indexes.sql");
+const DEFAULT_LOCALE_ENGLISH_SQL: &str =
+    include_str!("../migrations/0003_default_locale_english.sql");
+const STUDY_CYCLES_SQL: &str = include_str!("../migrations/0004_study_cycles.sql");
 
 /// Migraciones en orden. El checksum de cada una queda registrado en la base.
 const MIGRATIONS: &[(i64, &str, &str)] = &[
     (1, "0001_initial", INITIAL_SQL),
     (2, "0002_partial_unique_indexes", PARTIAL_UNIQUE_INDEXES_SQL),
+    (3, "0003_default_locale_english", DEFAULT_LOCALE_ENGLISH_SQL),
+    (4, "0004_study_cycles", STUDY_CYCLES_SQL),
 ];
 
 #[derive(Debug, Error)]
@@ -121,6 +126,10 @@ pub enum StoreError {
     TermNotFound,
     #[error("materia no encontrada")]
     SubjectNotFound,
+    #[error("ciclo del plan de estudios no encontrado")]
+    StudyCycleNotFound,
+    #[error("materia del plan de estudios no encontrada")]
+    StudyPlanSubjectNotFound,
     #[error("franja horaria no encontrada")]
     ClassSlotNotFound,
     #[error("rotación no encontrada")]
@@ -446,6 +455,16 @@ mod tests {
             .unwrap();
         assert_eq!(accent, "\"#6750A4\"");
 
+        let locale: String = store
+            .connection()
+            .query_row(
+                "SELECT value_json FROM setting WHERE key = 'locale'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(locale, "\"en\"");
+
         let scope: String = store
             .connection()
             .query_row(
@@ -503,9 +522,9 @@ mod tests {
             .execute("INSERT INTO task(id, title) VALUES ('t1', 'Previa')", [])
             .unwrap();
 
-        store.migrate().expect("migrar a v2");
+        store.migrate().expect("migrar a la última versión");
 
-        assert_eq!(store.schema_version().unwrap(), 2);
+        assert_eq!(store.schema_version().unwrap(), i64::from(SCHEMA_VERSION));
         let title: String = store
             .connection()
             .query_row("SELECT title FROM task WHERE id = 't1'", [], |row| {
@@ -513,6 +532,17 @@ mod tests {
             })
             .unwrap();
         assert_eq!(title, "Previa");
+
+        // Una bóveda con datos conserva el idioma que ya tenía configurado.
+        let locale: String = store
+            .connection()
+            .query_row(
+                "SELECT value_json FROM setting WHERE key = 'locale'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(locale, "\"es\"");
     }
 
     #[test]

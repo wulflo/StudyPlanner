@@ -6,7 +6,7 @@
 > en AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI) y macOS (`.dmg`); Snap queda
 > gestionado por snapd y el MSIX oculta el updater porque se actualiza desde la
 > Microsoft Store. La passphrase quedó custodiada y las releases firmadas se publican desde
-> `v0.1.0`; `v0.2.0` agrega la migración al esquema v2. Los instaladores NSIS/MSI y
+> `v0.1.0`; `v0.2.2` agrega el rediseño de interfaz y el plan de estudios por ciclos (esquema v4). Los instaladores NSIS/MSI y
 > macOS siguen sin firma de código del sistema operativo; el MSIX se firma en
 > Microsoft Store.
 > Ver límites más abajo.
@@ -23,8 +23,8 @@ grande; los artefactos que se publican salen de
 Se dispara con un tag `v*` o manualmente indicando un tag existente:
 
 ```bash
-git tag -a v0.2.0 -m "Study Planner 0.2.0"
-git push origin v0.2.0
+git tag -a v0.2.2 -m "Study Planner 0.2.2"
+git push origin v0.2.2
 ```
 
 El workflow `.github/workflows/release.yml` compila en una matriz de tres
@@ -141,37 +141,37 @@ permitida del updater):
 
 ```json
 {
-  "version": "0.2.0",
+  "version": "0.2.2",
   "pub_date": "2026-11-09T20:00:00.000Z",
-  "notes": "Study Planner 0.2.0.",
+  "notes": "Study Planner 0.2.2.",
   "platforms": {
     "linux-x86_64": {
-      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.0/study-planner_0.2.0_x86_64.AppImage",
+      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.2/study-planner_0.2.2_x86_64.AppImage",
       "signature": "<base64 de la firma minisign>",
       "sha256": "<64 hex>"
     },
     "linux-x86_64-deb": {
-      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.0/Study_Planner_0.2.0_amd64.deb",
+      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.2/Study_Planner_0.2.2_amd64.deb",
       "signature": "<base64>",
       "sha256": "<64 hex>"
     },
     "linux-x86_64-rpm": {
-      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.0/Study_Planner-0.2.0-1.x86_64.rpm",
+      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.2/Study_Planner-0.2.2-1.x86_64.rpm",
       "signature": "<base64>",
       "sha256": "<64 hex>"
     },
     "windows-x86_64": {
-      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.0/Study_Planner_0.2.0_x64-setup.exe",
+      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.2/Study_Planner_0.2.2_x64-setup.exe",
       "signature": "<base64>",
       "sha256": "<64 hex>"
     },
     "windows-x86_64-msi": {
-      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.0/Study_Planner_0.2.0_x64_en-US.msi",
+      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.2/Study_Planner_0.2.2_x64_en-US.msi",
       "signature": "<base64>",
       "sha256": "<64 hex>"
     },
     "darwin-aarch64": {
-      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.0/Study_Planner_0.2.0_aarch64.dmg",
+      "url": "https://github.com/wulflo/StudyPlanner/releases/download/v0.2.2/Study_Planner_0.2.2_aarch64.dmg",
       "signature": "<base64>",
       "sha256": "<64 hex>"
     }
@@ -204,9 +204,9 @@ Sin red, con la clave pública embebida:
 
 ```bash
 cargo run -q -p study-planner-updater --example verify_release -- \
-  study-planner_0.2.0_x86_64.AppImage \
-  study-planner_0.2.0_x86_64.AppImage.sig \
-  0.2.0
+  study-planner_0.2.2_x86_64.AppImage \
+  study-planner_0.2.2_x86_64.AppImage.sig \
+  0.2.2
 ```
 
 Si la firma declara otra versión, el comando falla con

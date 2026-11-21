@@ -1,5 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Trans } from "react-i18next";
+import { CustomSelect } from "../components/CustomSelect";
+import { DateField } from "../components/DateField";
 import { useTranslation } from "../lib/i18n";
 import {
   createExam,
@@ -383,24 +385,23 @@ export function ExamsView({
         <>
           <section className="academic-panel">
             <div className="inline-form">
-              <label className="field">
+              <div className="field">
                 <span>{t("common.subject")}</span>
-                <select
+                <CustomSelect
+                  ariaLabel={t("common.subject")}
                   className="select-field"
                   value={subjectId}
-                  onChange={(event) => {
-                    setSubjectId(event.target.value);
+                  onChange={(value) => {
+                    setSubjectId(value);
                     setExamForm(emptyExam);
                     setTopicForm(emptyTopic);
                   }}
-                >
-                  {subjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={subjects.map((subject) => ({
+                    value: subject.id,
+                    label: subject.name,
+                  }))}
+                />
+              </div>
             </div>
           </section>
 
@@ -516,18 +517,12 @@ export function ExamsView({
                     required
                   />
                 </label>
-                <label className="field">
-                  <span>{t("common.date")}</span>
-                  <input
-                    className="text-field"
-                    type="date"
-                    value={examForm.date}
-                    onChange={(event) =>
-                      setExamForm({ ...examForm, date: event.target.value })
-                    }
-                    required
-                  />
-                </label>
+                <DateField
+                  label={t("common.date")}
+                  value={examForm.date}
+                  onChange={(date) => setExamForm({ ...examForm, date })}
+                  required
+                />
                 <label className="field narrow">
                   <span>{t("common.start")}</span>
                   <input
@@ -607,25 +602,24 @@ export function ExamsView({
                     }
                   />
                 </label>
-                <label className="field">
+                <div className="field">
                   <span>{t("exams.result")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("exams.result")}
                     className="select-field"
                     value={examForm.resultStatus}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setExamForm({
                         ...examForm,
-                        resultStatus: event.target.value as ExamResultStatus,
+                        resultStatus: value as ExamResultStatus,
                       })
                     }
-                  >
-                    {resultStatuses.map((value) => (
-                      <option key={value} value={value}>
-                        {t(`exams.status.${value}`)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    options={resultStatuses.map((value) => ({
+                      value,
+                      label: t(`exams.status.${value}`),
+                    }))}
+                  />
+                </div>
                 <label className="field">
                   <span>{t("common.notes")}</span>
                   <input
@@ -706,26 +700,24 @@ export function ExamsView({
                   required
                 />
               </label>
-              <label className="field">
+              <div className="field">
                 <span>{t("exams.parent")}</span>
-                <select
+                <CustomSelect
+                  ariaLabel={t("exams.parent")}
                   className="select-field"
                   value={topicForm.parentTopicId}
-                  onChange={(event) =>
-                    setTopicForm({
-                      ...topicForm,
-                      parentTopicId: event.target.value,
-                    })
+                  onChange={(value) =>
+                    setTopicForm({ ...topicForm, parentTopicId: value })
                   }
-                >
-                  <option value="">{t("common.noParent")}</option>
-                  {topics.map((topic) => (
-                    <option key={topic.id} value={topic.id}>
-                      {topic.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  options={[
+                    { value: "", label: t("common.noParent") },
+                    ...topics.map((topic) => ({
+                      value: topic.id,
+                      label: topic.name,
+                    })),
+                  ]}
+                />
+              </div>
               <label className="field">
                 <span>{t("common.description")}</span>
                 <input

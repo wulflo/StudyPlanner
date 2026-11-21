@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { Trans } from "react-i18next";
 import { ResizeHandles } from "./components/ResizeHandles";
 import { WindowControls } from "./components/WindowControls";
-import { intlLocale, useTranslation } from "./lib/i18n";
+import {
+  hasStoredLanguage,
+  intlLocale,
+  normalizeLanguage,
+  setAppLanguage,
+  useTranslation,
+} from "./lib/i18n";
 import {
   type AppInfo,
   chooseVault,
@@ -11,6 +17,7 @@ import {
   deleteTask,
   exportVault,
   getAppInfo,
+  getAppLocale,
   getVaultStatus,
   importVault,
   listTasks,
@@ -34,24 +41,89 @@ import { TasksView } from "./views/TasksView";
 import { TodaySchedule } from "./views/TodaySchedule";
 import "./styles.css";
 
-const navItems = [
-  { id: "today", icon: "today" },
-  { id: "subjects", icon: "subjects" },
-  { id: "schedule", icon: "schedule" },
-  { id: "calendar", icon: "calendar" },
-  { id: "tasks", icon: "tasks" },
-  { id: "exams", icon: "exams" },
-  { id: "grades", icon: "grades" },
-  { id: "study", icon: "study" },
-  { id: "strengths", icon: "strengths" },
-  { id: "stats", icon: "stats" },
-  { id: "vault", icon: "vault" },
-  { id: "settings", icon: "settings" },
+const navGroups = [
+  {
+    id: "daily",
+    icon: "daily",
+    items: [
+      { id: "today", icon: "today" },
+      { id: "calendar", icon: "calendar" },
+      { id: "tasks", icon: "tasks" },
+    ],
+  },
+  {
+    id: "academics",
+    icon: "academics",
+    items: [
+      { id: "subjects", icon: "subjects" },
+      { id: "schedule", icon: "schedule" },
+      { id: "exams", icon: "exams" },
+      { id: "grades", icon: "grades" },
+    ],
+  },
+  {
+    id: "study",
+    icon: "studyGroup",
+    items: [
+      { id: "study", icon: "study" },
+      { id: "strengths", icon: "strengths" },
+      { id: "stats", icon: "stats" },
+    ],
+  },
+  {
+    id: "system",
+    icon: "system",
+    items: [
+      { id: "vault", icon: "vault" },
+      { id: "settings", icon: "settings" },
+    ],
+  },
 ] as const;
 
-type SectionId = (typeof navItems)[number]["id"];
+type SectionId = (typeof navGroups)[number]["items"][number]["id"];
+type NavGroupId = (typeof navGroups)[number]["id"];
+
+const NAV_EXPANDED_KEY = "study-planner.nav.expanded";
+
+function groupForSection(section: SectionId): NavGroupId {
+  return (
+    navGroups.find((group) => group.items.some((item) => item.id === section))
+      ?.id ?? "daily"
+  );
+}
+
+function readExpandedGroups(): Set<NavGroupId> {
+  const fallback = new Set<NavGroupId>([groupForSection("today")]);
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  try {
+    const stored = window.localStorage.getItem(NAV_EXPANDED_KEY);
+    if (!stored) {
+      return fallback;
+    }
+    const parsed: unknown = JSON.parse(stored);
+    if (!Array.isArray(parsed)) {
+      return fallback;
+    }
+    const valid = parsed.filter((id): id is NavGroupId =>
+      navGroups.some((group) => group.id === id),
+    );
+    return valid.length > 0 ? new Set(valid) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 const iconPaths: Record<string, string> = {
+  daily:
+    "M12 3 3 10v11h6v-6h6v6h6V10l-9-7Zm0 2.4 7 5.4V19h-2v-6H7v6H5v-8.2l7-5.4Z",
+  academics:
+    "M12 3 2 8l10 5 8-4v6h2V8L12 3ZM6 12.4V16c0 2.2 2.7 4 6 4s6-1.8 6-4v-3.6l-6 3-6-3Z",
+  studyGroup:
+    "M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Zm-3 17h6v2H9v-2Zm1-4v-1.4l-1.2-1a5 5 0 1 1 6.4 0l-1.2 1V15h-4Z",
+  system:
+    "M4 6h7v2H4V6Zm9 0h7v2h-7V6ZM4 16h3v2H4v-2Zm5 0h11v2H9v-2ZM8 4h2v6H8V4Zm6 10h2v6h-2v-6Z",
   today:
     "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm2 3v2h10V7H7Zm0 4v2h4v-2H7Zm6 0v2h4v-2h-4Zm-6 4v2h4v-2H7Z",
   subjects:
@@ -600,6 +672,8 @@ function VaultView({
 function App() {
   const { t } = useTranslation();
   const [active, setActive] = useState<SectionId>("today");
+  const [expandedGroups, setExpandedGroups] =
+    useState<Set<NavGroupId>>(readExpandedGroups);
   const {
     mode: themeMode,
     accent,
@@ -618,6 +692,29 @@ function App() {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [restoring, setRestoring] = useState(false);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        NAV_EXPANDED_KEY,
+        JSON.stringify([...expandedGroups]),
+      );
+    } catch {
+      // La navegación sigue funcionando aunque el navegador bloquee el almacenamiento.
+    }
+  }, [expandedGroups]);
+
+  useEffect(() => {
+    const groupId = groupForSection(active);
+    setExpandedGroups((current) => {
+      if (current.has(groupId)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.add(groupId);
+      return next;
+    });
+  }, [active]);
 
   useEffect(() => {
     if (!runningInTauri) {
@@ -645,6 +742,16 @@ function App() {
         }
         setVault(status);
         if (status.ready) {
+          if (!hasStoredLanguage() && typeof getAppLocale === "function") {
+            try {
+              const storedLocale = await getAppLocale();
+              if (storedLocale && !cancelled) {
+                await setAppLanguage(normalizeLanguage(storedLocale));
+              }
+            } catch {
+              // La bóveda puede no exponer el ajuste todavía; se usa inglés.
+            }
+          }
           const stored = await listTasks();
           if (!cancelled) {
             setTasks(stored);
@@ -674,6 +781,20 @@ function App() {
         return;
       }
       setVault(status);
+      if (
+        status.ready &&
+        !hasStoredLanguage() &&
+        typeof getAppLocale === "function"
+      ) {
+        try {
+          const storedLocale = await getAppLocale();
+          if (storedLocale) {
+            await setAppLanguage(normalizeLanguage(storedLocale));
+          }
+        } catch {
+          // Se mantiene el inglés por defecto.
+        }
+      }
       setTasks(status.ready ? await listTasks() : []);
       setTaskError(null);
     } catch (reason) {
@@ -796,6 +917,31 @@ function App() {
     }
   }
 
+  function navigate(section: SectionId) {
+    setActive(section);
+    const groupId = groupForSection(section);
+    setExpandedGroups((current) => {
+      if (current.has(groupId)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.add(groupId);
+      return next;
+    });
+  }
+
+  function toggleGroup(groupId: NavGroupId) {
+    setExpandedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  }
+
   return (
     <div className="app">
       <ResizeHandles />
@@ -809,7 +955,7 @@ function App() {
             height={30}
           />
           <span className="brand-name">Study Planner</span>
-          <span className="phase-chip">{t("app.localChip")}</span>
+          <span className="local-chip">{t("app.localChip")}</span>
         </div>
         <div className="topbar-end">
           <div className="topbar-meta">
@@ -822,20 +968,62 @@ function App() {
 
       <div className="shell">
         <nav className="nav-rail" aria-label={t("nav.aria")}>
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`nav-item${active === item.id ? " is-active" : ""}`}
-              aria-current={active === item.id ? "page" : undefined}
-              aria-label={t(`nav.${item.id}`)}
-              title={t(`nav.${item.id}`)}
-              onClick={() => setActive(item.id)}
-            >
-              <Icon name={item.icon} />
-              <span>{t(`nav.${item.id}`)}</span>
-            </button>
-          ))}
+          {navGroups.map((group) => {
+            const expanded = expandedGroups.has(group.id);
+            const panelId = `nav-group-${group.id}`;
+            return (
+              <div
+                className={`nav-group${
+                  expanded ? " is-expanded" : " is-collapsed"
+                }`}
+                key={group.id}
+              >
+                <button
+                  type="button"
+                  className="nav-group-toggle"
+                  aria-expanded={expanded}
+                  aria-controls={panelId}
+                  aria-label={t(
+                    expanded ? "nav.collapseGroup" : "nav.expandGroup",
+                    { group: t(`nav.groups.${group.id}`) },
+                  )}
+                  title={t(`nav.groups.${group.id}`)}
+                  onClick={() => toggleGroup(group.id)}
+                >
+                  <Icon name={group.icon} />
+                  <span className="nav-group-label">
+                    {t(`nav.groups.${group.id}`)}
+                  </span>
+                  <svg
+                    className="nav-group-chevron"
+                    viewBox="0 0 20 20"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M5 7.5 10 12.5 15 7.5" />
+                  </svg>
+                </button>
+                <div className="nav-group-items" id={panelId}>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`nav-item${
+                        active === item.id ? " is-active" : ""
+                      }`}
+                      aria-current={active === item.id ? "page" : undefined}
+                      aria-label={t(`nav.${item.id}`)}
+                      title={t(`nav.${item.id}`)}
+                      onClick={() => navigate(item.id)}
+                    >
+                      <Icon name={item.icon} />
+                      <span>{t(`nav.${item.id}`)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
         <main className="main">
@@ -849,9 +1037,9 @@ function App() {
             <TodayView
               vault={vault}
               tasks={tasks}
-              onOpenTasks={() => setActive("tasks")}
-              onOpenVault={() => setActive("vault")}
-              onGoSubjects={() => setActive("subjects")}
+              onOpenTasks={() => navigate("tasks")}
+              onOpenVault={() => navigate("vault")}
+              onGoSubjects={() => navigate("subjects")}
               onToggleTask={handleToggleTask}
             />
           ) : null}
@@ -861,7 +1049,7 @@ function App() {
               vault={vault}
               tasks={tasks}
               error={taskError}
-              onGoVault={() => setActive("vault")}
+              onGoVault={() => navigate("vault")}
               onCreate={handleCreateTask}
               onToggle={handleToggleTask}
               onDelete={handleDeleteTask}
@@ -870,65 +1058,65 @@ function App() {
           ) : null}
 
           {active === "subjects" ? (
-            <AcademicView vault={vault} onGoVault={() => setActive("vault")} />
+            <AcademicView vault={vault} onGoVault={() => navigate("vault")} />
           ) : null}
 
           {active === "schedule" ? (
             <ScheduleView
               vault={vault}
-              onGoVault={() => setActive("vault")}
-              onGoSubjects={() => setActive("subjects")}
+              onGoVault={() => navigate("vault")}
+              onGoSubjects={() => navigate("subjects")}
             />
           ) : null}
 
           {active === "calendar" ? (
             <CalendarView
               vault={vault}
-              onGoVault={() => setActive("vault")}
-              onGoSubjects={() => setActive("subjects")}
-              onBack={() => setActive("today")}
+              onGoVault={() => navigate("vault")}
+              onGoSubjects={() => navigate("subjects")}
+              onBack={() => navigate("today")}
             />
           ) : null}
 
           {active === "exams" ? (
             <ExamsView
               vault={vault}
-              onGoVault={() => setActive("vault")}
-              onGoSubjects={() => setActive("subjects")}
+              onGoVault={() => navigate("vault")}
+              onGoSubjects={() => navigate("subjects")}
             />
           ) : null}
 
           {active === "grades" ? (
             <GradesView
               vault={vault}
-              onGoVault={() => setActive("vault")}
-              onGoSubjects={() => setActive("subjects")}
+              onGoVault={() => navigate("vault")}
+              onGoSubjects={() => navigate("subjects")}
             />
           ) : null}
 
           {active === "study" ? (
             <StudyView
               vault={vault}
-              onGoVault={() => setActive("vault")}
-              onGoSubjects={() => setActive("subjects")}
-              onGoStrengths={() => setActive("strengths")}
+              onGoVault={() => navigate("vault")}
+              onGoSubjects={() => navigate("subjects")}
+              onGoStrengths={() => navigate("strengths")}
             />
           ) : null}
 
           {active === "strengths" ? (
             <StrengthsView
               vault={vault}
-              onGoVault={() => setActive("vault")}
-              onGoSubjects={() => setActive("subjects")}
-              onGoExams={() => setActive("exams")}
+              onGoVault={() => navigate("vault")}
+              onGoSubjects={() => navigate("subjects")}
+              onGoExams={() => navigate("exams")}
             />
           ) : null}
 
           {active === "stats" ? (
             <StatsView
               vault={vault}
-              onGoVault={() => setActive("vault")}
-              onGoStrengths={() => setActive("strengths")}
+              onGoVault={() => navigate("vault")}
+              onGoStrengths={() => navigate("strengths")}
             />
           ) : null}
 
@@ -953,7 +1141,7 @@ function App() {
           {active === "settings" ? (
             <SettingsView
               vault={vault}
-              onGoVault={() => setActive("vault")}
+              onGoVault={() => navigate("vault")}
               themeMode={themeMode}
               accent={accent}
               onThemeModeChange={setThemeMode}

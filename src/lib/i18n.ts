@@ -7,12 +7,13 @@ import esResources from "../locales/es";
 export type AppLanguage = "es" | "en";
 
 export const LANGUAGES: ReadonlyArray<{ id: AppLanguage; label: string }> = [
-  { id: "es", label: "Español" },
   { id: "en", label: "English" },
+  { id: "es", label: "Español" },
 ];
 
 const LANGUAGE_KEY = "study-planner.language";
-const DEFAULT_LANGUAGE: AppLanguage = "es";
+// English is always the first-run language, regardless of the OS locale.
+const DEFAULT_LANGUAGE: AppLanguage = "en";
 
 function readStorage(key: string): string | null {
   try {
@@ -33,7 +34,16 @@ function writeStorage(key: string, value: string) {
 export function normalizeLanguage(
   value: string | null | undefined,
 ): AppLanguage {
-  return value === "en" ? "en" : DEFAULT_LANGUAGE;
+  return value === "es" ? "es" : DEFAULT_LANGUAGE;
+}
+
+/** Indica si el usuario ya eligió un idioma en este dispositivo. */
+export function hasStoredLanguage(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const stored = readStorage(LANGUAGE_KEY);
+  return stored === "es" || stored === "en";
 }
 
 export function readLanguage(): AppLanguage {

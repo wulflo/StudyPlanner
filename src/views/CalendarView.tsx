@@ -9,6 +9,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
+import { CustomSelect } from "../components/CustomSelect";
 import { getDateFnsLocale, useTranslation } from "../lib/i18n";
 import {
   type Exam,
@@ -261,20 +262,19 @@ export function CalendarView({
             <>
               <section className="academic-panel">
                 <div className="week-tools">
-                  <label className="field">
+                  <div className="field">
                     <span>{t("common.term")}</span>
-                    <select
+                    <CustomSelect
+                      ariaLabel={t("common.term")}
                       className="select-field"
                       value={termId}
-                      onChange={(event) => setTermId(event.target.value)}
-                    >
-                      {terms.map((term) => (
-                        <option key={term.id} value={term.id}>
-                          {term.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      onChange={setTermId}
+                      options={terms.map((term) => ({
+                        value: term.id,
+                        label: term.name,
+                      }))}
+                    />
+                  </div>
                   <div className="week-nav">
                     <button
                       type="button"

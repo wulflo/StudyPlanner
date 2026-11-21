@@ -4,8 +4,10 @@
 
 Schedules, subjects, exams, grades, tasks, notes, and spaced repetition in a single SQLite vault. No accounts, no cloud, no telemetry.
 
+**English** · [Español](README.es.md)
+
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
-[![Status: v0.2.0](https://img.shields.io/badge/status-v0.2.0-brightgreen.svg)](CHANGELOG.md)
+[![Status: v0.2.2](https://img.shields.io/badge/status-v0.2.2-brightgreen.svg)](CHANGELOG.md)
 [![Tauri 2.12](https://img.shields.io/badge/Tauri-2.12-24C8D8?logo=tauri&logoColor=white)](https://tauri.app)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![Platforms: Linux | Windows | macOS](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)](#requirements)
@@ -16,9 +18,9 @@ Schedules, subjects, exams, grades, tasks, notes, and spaced repetition in a sin
 
 ## Project status
 
-> **Phases 0 through 5 are complete and released.** `v0.2.0` ships as AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX), and macOS, with a signed cross-platform updater, local notifications, and MSIX packaging for the Microsoft Store. It migrates the vault to schema v2 and closes the integrity and security review. Snap `study-planner` 0.1.0 is available on `stable` (revision 1); the next revision will use 0.2.0.
+> **Phases 0 through 5 are complete and released.** `v0.2.2` ships as AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX), and macOS, with a signed cross-platform updater, local notifications, and MSIX packaging for the Microsoft Store. This release rebuilds the interface on Material 3 tokens, makes English the default language with Spanish still available, adds accessible custom dropdowns and date fields, a collapsible sidebar, and a degree study-plan tracker with cycles and approved subjects (vault schema v4). Snap `study-planner` is published from the same release pipeline.
 >
-> The app includes light, dark, and system themes, accent colors, a background tray mode, and reminders with optional sound. The public Snap listing may take a while while Canonical reviews the first submission.
+> The app includes light, dark, and system themes, accent colors, a background tray mode, and reminders with optional sound.
 
 ## Design principles
 
@@ -79,6 +81,8 @@ npm run dev
 | Document | Contents |
 | :--- | :--- |
 | [`docs/CHECKLIST.md`](docs/CHECKLIST.md) | Status, phases, rules, and next steps |
+| [`docs/USER_GUIDE.en.md`](docs/USER_GUIDE.en.md) | User guide (English) |
+| [`docs/USER_GUIDE.es.md`](docs/USER_GUIDE.es.md) | Guía del usuario (español) |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, security boundaries, and flows |
 | [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) | Schema and conventions |
 | [`docs/EXPORT_FORMAT.md`](docs/EXPORT_FORMAT.md) | The `.txt` export contract |

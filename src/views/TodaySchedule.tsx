@@ -1,5 +1,5 @@
 import { format, parseISO, startOfWeek } from "date-fns";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { AttendanceButtons } from "../components/AttendanceButtons";
 import { safeColor } from "../lib/color";
 import { getDateFnsLocale, useTranslation } from "../lib/i18n";
@@ -150,7 +150,10 @@ export function TodaySchedule({
         </p>
       ) : null}
 
-      <section className="status-card" aria-labelledby="next-class-title">
+      <section
+        className="status-card is-next"
+        aria-labelledby="next-class-title"
+      >
         <div>
           <p className="eyebrow">
             {t("nav.schedule")} · {today}
@@ -207,6 +210,11 @@ export function TodaySchedule({
                 <li
                   className={`occurrence kind-${occurrence.kind}`}
                   key={`${occurrence.slotId}-${occurrence.date}-${occurrence.kind}`}
+                  style={
+                    {
+                      "--subject-color": safeColor(occurrence.subjectColor),
+                    } as CSSProperties
+                  }
                 >
                   <div className="occurrence-head">
                     <span

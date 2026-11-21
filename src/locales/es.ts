@@ -62,14 +62,22 @@ const es = {
     stats: "Estadísticas",
     vault: "Bóveda",
     settings: "Ajustes",
+    expandGroup: "Expandir sección {{group}}",
+    collapseGroup: "Contraer sección {{group}}",
+    groups: {
+      daily: "Diario",
+      academics: "Academia",
+      study: "Estudio",
+      system: "Sistema",
+    },
   },
   app: {
-    localChip: "Local",
+    localChip: "Sin conexión",
     tagline: "Local · sin cuentas · sin telemetría",
   },
   today: {
     eyebrowReady: "Bóveda local · {{name}}",
-    eyebrowFirst: "Primer paso · Hoy",
+    eyebrowFirst: "Primeros pasos",
     titleReady: "Tu año académico, en una bóveda local.",
     titleFirst: "Empezá por elegir tu bóveda local.",
     copyReady:
@@ -102,7 +110,7 @@ const es = {
     continuityKicker: "Continuidad",
     continuityTitle: "Reanudable",
     continuityBody:
-      "Cada fase deja tests, changelog y un checklist para retomar sin romper lo anterior.",
+      "Cada actualización está probada y documentada para que puedas seguir sin perder contexto.",
     reopen: "Reabrir",
     complete: "Completar",
     done: "Hecha",
@@ -200,7 +208,7 @@ const es = {
     },
   },
   vault: {
-    eyebrow: "Bóveda local · Fase 1",
+    eyebrow: "Bóveda local · almacenamiento y respaldos",
     title: "Bóveda local",
     copy: "Elegí una carpeta raíz fuera del repositorio. Study Planner valida la ruta, bloquea la bóveda contra otras instancias y mantiene backups verificados; la ruta completa no se expone a la interfaz.",
     openPicker: "Abriendo selector…",
@@ -286,7 +294,7 @@ const es = {
       "Backup principal restaurado. La bóveda se reabrió y quedó un backup pre-restore del estado anterior.",
   },
   academic: {
-    eyebrow: "Materias · Fase 2",
+    eyebrow: "Materias · años y términos",
     title: "Estructura académica",
     copyReady:
       "Cargá el año, sus términos y las materias. Después armá el horario semanal con rotaciones, feriados y asistencia.",
@@ -333,6 +341,40 @@ const es = {
     noExtra: "Sin datos adicionales",
     attendanceLabel: "Asistencia mínima:",
     noThreshold: "sin umbral",
+    studyPlanTitle: "Plan de estudios",
+    studyPlanCopy:
+      "Todas las materias de tu carrera, agrupadas por ciclos. No son los semestres: agregalas acá y marcalas a medida que las aprobás.",
+    noCycles:
+      "Todavía no hay ciclos. Creá el primero para agrupar las materias de tu carrera.",
+    cycle: "Ciclo",
+    cycleNamePlaceholder: "Ciclo 1",
+    position: "Orden",
+    addCycle: "Agregar ciclo",
+    saveCycle: "Guardar ciclo",
+    cycleProgress: "{{approved}} de {{total}} aprobadas",
+    overallProgress: "{{approved}} de {{total}} materias aprobadas",
+    cycleNoSubjects:
+      "Este ciclo todavía no tiene materias. Agregá la primera abajo.",
+    requiredCycle: "Primero creá o elegí un ciclo.",
+    planSubjectLabel: "Materia del plan",
+    addPlanSubject: "Agregar materia",
+    savePlanSubject: "Guardar materia del plan",
+    approveSubjectAria: "Marcar «{{name}}» como aprobada",
+    addSubjectPlaceholder: "Nombre de la materia",
+    moveUp: "Subir",
+    moveDown: "Bajar",
+    moveCycleUpAria: "Subir ciclo «{{name}}»",
+    moveCycleDownAria: "Bajar ciclo «{{name}}»",
+    movePlanSubjectUpAria: "Subir «{{name}}»",
+    movePlanSubjectDownAria: "Bajar «{{name}}»",
+    cycleCreated: "Ciclo creado.",
+    cycleUpdated: "Ciclo actualizado.",
+    cycleDeleted: "Ciclo «{{name}}» eliminado.",
+    deleteCycleAria: "Eliminar ciclo «{{name}}»",
+    planSubjectCreated: "Materia del plan creada.",
+    planSubjectUpdated: "Materia del plan actualizada.",
+    planSubjectDeleted: "Materia del plan «{{name}}» eliminada.",
+    deletePlanSubjectAria: "Eliminar materia del plan «{{name}}»",
     kind: {
       semester: "Semestre",
       trimester: "Trimestre",
@@ -343,7 +385,7 @@ const es = {
     },
   },
   schedule: {
-    eyebrow: "Horario · Fase 2",
+    eyebrow: "Horario · semanas y rotaciones",
     title: "Horario semanal",
     copyReady:
       "Rotaciones, feriados y excepciones se aplican sobre la semana. La asistencia se registra por clase y alimenta el umbral de cada materia.",
@@ -859,6 +901,15 @@ const es = {
       backup: "Backup",
       update: "Actualización",
     },
+  },
+  date: {
+    placeholder: "dd/mm/aaaa",
+    picker: "Elegir fecha",
+    openPicker: "Abrir calendario",
+    previousMonth: "Mes anterior",
+    nextMonth: "Mes siguiente",
+    today: "Hoy",
+    clear: "Limpiar",
   },
   attendance: {
     present: "Presente",

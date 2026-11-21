@@ -39,6 +39,8 @@ pub const TABLE_ORDER: &[&str] = &[
     "holiday",
     "rotation_config",
     "subject",
+    "study_cycle",
+    "study_plan_subject",
     "class_slot",
     "class_exception",
     "attendance_record",
@@ -1289,7 +1291,7 @@ mod tests {
         assert_eq!(EXPORT_MAGIC, "STUDY-PLANNER-EXPORT");
         assert_eq!(EXPORT_END, "STUDY-PLANNER-END");
         assert_eq!(EXPORT_FORMAT_VERSION_VALUE, 1);
-        assert_eq!(SCHEMA_VERSION, 2);
+        assert_eq!(SCHEMA_VERSION, 4);
     }
 
     #[test]

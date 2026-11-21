@@ -77,12 +77,12 @@ Formato compatible con la convención de Tauri, pero verificado por nuestro cód
 
 ```json
 {
-  "version": "0.2.0",
+  "version": "0.2.2",
   "pub_date": "2026-12-01T00:00:00Z",
   "notes": "Cambios de la versión",
   "platforms": {
     "linux-x86_64": {
-      "url": "https://.../Study Planner_0.2.0_amd64.AppImage",
+      "url": "https://.../Study Planner_0.2.2_amd64.AppImage",
       "signature": "<firma minisign del artefacto o del manifiesto>",
       "sha256": "<hex>"
     }

@@ -20,6 +20,7 @@ import {
   runNotificationScan,
   runningInTauri,
   sendTestNotification,
+  setAppLocale,
   setBackgroundMode,
   setNotificationsEnabled,
   setNotificationsSound,
@@ -422,7 +423,15 @@ export function SettingsView({
                   type="button"
                   className={`segment${language === option.id ? " is-selected" : ""}`}
                   aria-pressed={language === option.id}
-                  onClick={() => void setAppLanguage(option.id as AppLanguage)}
+                  onClick={() => {
+                    const next = option.id as AppLanguage;
+                    void setAppLanguage(next);
+                    // El idioma también se guarda en la bóveda para otros equipos;
+                    // si la bóveda aún no está lista, localStorage ya lo conserva.
+                    if (typeof setAppLocale === "function") {
+                      void setAppLocale(next).catch(() => undefined);
+                    }
+                  }}
                 >
                   {option.id === "es"
                     ? t("settings.spanish")

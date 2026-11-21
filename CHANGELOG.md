@@ -2,6 +2,32 @@
 
 Todos los cambios relevantes de Study Planner se registran acá. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado pretende seguir [SemVer](https://semver.org/lang/es/).
 
+## [0.2.2] — 2026-11-21 — Rediseño de interfaz y plan de estudios
+
+### Agregado
+
+- Interfaz bilingüe con inglés como idioma predeterminado y español como opción; la elección se guarda en `localStorage` y en la bóveda (migración `0003`).
+- **Plan de estudios** por ciclos dentro de Materias: crear, editar, borrar y reordenar ciclos y materias, marcar materias aprobadas, progreso por ciclo y progreso global (migración `0004`, esquema de bóveda v4).
+- Selectores desplegables propios con navegación por teclado, subtítulos, punto de color y apertura hacia arriba cuando no hay espacio.
+- Campo de fecha propio con calendario, navegación por teclado y soporte de tema claro/oscuro.
+- Barra lateral colapsable con subsecciones, grupos persistidos en `localStorage` y modo de solo iconos en ventanas angostas.
+- Guías de usuario en inglés y español (`docs/USER_GUIDE.en.md`, `docs/USER_GUIDE.es.md`) y `README.es.md` como espejo del README.
+
+### Cambiado
+
+- Rediseño visual Material 3: tokens de color claro/oscuro, escala de espaciado, radios, sombras, transiciones de 150 ms y estados vacíos unificados.
+- Botones e inputs con radios de 8–10 px; chips, badges, filtros y barras de progreso conservan la forma de píldora.
+- Se eliminaron las etiquetas de fase de la interfaz, los `backdrop-filter` y los recursos remotos.
+- La exportación/importación canónica incluye las tablas nuevas `study_cycle` y `study_plan_subject`.
+- El snap y la app comparten la misma versión (`0.2.2`) y el pipeline de release publica AppImage, `.deb`, `.rpm`, NSIS, MSI, DMG y snap.
+
+### Corregido
+
+- Plan de estudios: las acciones de cada materia y de cada ciclo pasan de una columna de ~120 px a una fila compacta; las filas usan padding y separación coherentes.
+- Estados vacíos como «Sin términos» en Horario semanal: el contenido alinea su padding horizontal con el hero de la vista y el botón queda separado del texto.
+- Campos de fecha: etiquetas correctas y `aria-haspopup` en el botón del calendario.
+- Claves de traducción faltantes en «Hoy» y en el formulario de horario.
+
 ## [0.2.0] — 2026-11-16 — Corrección de integridad y seguridad
 
 ### Corregido

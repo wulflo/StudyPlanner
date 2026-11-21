@@ -1,5 +1,6 @@
 import { format, subDays } from "date-fns";
 import { useEffect, useState } from "react";
+import { CustomSelect } from "../components/CustomSelect";
 import { useTranslation } from "../lib/i18n";
 import { getStudyStats, type StudyStats, type VaultStatus } from "../lib/ipc";
 
@@ -116,19 +117,20 @@ export function StatsView({
           ) : null}
 
           <section className="academic-panel">
-            <label className="field narrow">
+            <div className="field narrow">
               <span>{t("stats.period")}</span>
-              <select
+              <CustomSelect
                 className="select-field"
-                aria-label={t("stats.periodAria")}
+                ariaLabel={t("stats.periodAria")}
                 value={period}
-                onChange={(event) => setPeriod(event.target.value as Period)}
-              >
-                <option value="7">{t("stats.last7")}</option>
-                <option value="30">{t("stats.last30")}</option>
-                <option value="all">{t("stats.allHistory")}</option>
-              </select>
-            </label>
+                onChange={(value) => setPeriod(value as Period)}
+                options={[
+                  { value: "7", label: t("stats.last7") },
+                  { value: "30", label: t("stats.last30") },
+                  { value: "all", label: t("stats.allHistory") },
+                ]}
+              />
+            </div>
             <div className="study-summary">
               <span className="status-pill">
                 {t("stats.sessions", {

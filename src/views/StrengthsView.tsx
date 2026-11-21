@@ -1,5 +1,7 @@
 import { format } from "date-fns";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { CustomSelect } from "../components/CustomSelect";
+import { DateField } from "../components/DateField";
 import { useTranslation } from "../lib/i18n";
 import {
   clearStrengthOverride,
@@ -301,25 +303,24 @@ export function StrengthsView({
           ) : (
             <>
               <section className="academic-panel">
-                <label className="field">
+                <div className="field">
                   <span>{t("common.subject")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("common.subject")}
                     className="select-field"
                     value={subjectId}
-                    onChange={(event) => {
-                      setSubjectId(event.target.value);
+                    onChange={(value) => {
+                      setSubjectId(value);
                       setSelectedId(null);
                       setNotice(null);
                       setError(null);
                     }}
-                  >
-                    {subjects.map((subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    options={subjects.map((subject) => ({
+                      value: subject.id,
+                      label: subject.name,
+                    }))}
+                  />
+                </div>
                 <div className="study-summary">
                   <span className="status-pill is-low">
                     {t("strengths.counts.weak", { count: counts.weak })}
@@ -438,21 +439,19 @@ export function StrengthsView({
                           <p className="eyebrow">
                             {t("strengths.selfAssessment")}
                           </p>
-                          <label className="field narrow">
+                          <div className="field narrow">
                             <span>{t("strengths.score")}</span>
-                            <select
+                            <CustomSelect
                               className="select-field"
-                              aria-label={t("strengths.assessmentAria")}
+                              ariaLabel={t("strengths.assessmentAria")}
                               value={score}
-                              onChange={(event) => setScore(event.target.value)}
-                            >
-                              {[1, 2, 3, 4, 5].map((value) => (
-                                <option key={value} value={value}>
-                                  {value}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                              onChange={setScore}
+                              options={[1, 2, 3, 4, 5].map((value) => ({
+                                value: String(value),
+                                label: String(value),
+                              }))}
+                            />
+                          </div>
                           <label className="field">
                             <span>{t("strengths.noteOptional")}</span>
                             <input
@@ -476,29 +475,39 @@ export function StrengthsView({
                           <p className="eyebrow">
                             {t("strengths.manualOverride")}
                           </p>
-                          <label className="field narrow">
+                          <div className="field narrow">
                             <span>{t("strengths.classification")}</span>
-                            <select
+                            <CustomSelect
                               className="select-field"
-                              aria-label={t("strengths.manualClassAria")}
+                              ariaLabel={t("strengths.manualClassAria")}
                               value={overrideClass}
-                              onChange={(event) =>
+                              onChange={(value) =>
                                 setOverrideClass(
-                                  event.target.value as StrengthClassification,
+                                  value as StrengthClassification,
                                 )
                               }
-                            >
-                              <option value="weak">
-                                {t("strengths.classificationLabel.weak")}
-                              </option>
-                              <option value="neutral">
-                                {t("strengths.classificationLabel.neutral")}
-                              </option>
-                              <option value="strength">
-                                {t("strengths.classificationLabel.strength")}
-                              </option>
-                            </select>
-                          </label>
+                              options={[
+                                {
+                                  value: "weak",
+                                  label: t(
+                                    "strengths.classificationLabel.weak",
+                                  ),
+                                },
+                                {
+                                  value: "neutral",
+                                  label: t(
+                                    "strengths.classificationLabel.neutral",
+                                  ),
+                                },
+                                {
+                                  value: "strength",
+                                  label: t(
+                                    "strengths.classificationLabel.strength",
+                                  ),
+                                },
+                              ]}
+                            />
+                          </div>
                           <label className="field">
                             <span>{t("strengths.reasonOptional")}</span>
                             <input
@@ -578,23 +587,19 @@ export function StrengthsView({
                             <p className="quiet">{t("strengths.noReview")}</p>
                           )}
 
-                          <label className="field narrow">
+                          <div className="field narrow">
                             <span>{t("strengths.reviewQuality")}</span>
-                            <select
+                            <CustomSelect
                               className="select-field"
-                              aria-label={t("strengths.reviewQualityAria")}
+                              ariaLabel={t("strengths.reviewQualityAria")}
                               value={quality}
-                              onChange={(event) =>
-                                setQuality(event.target.value)
-                              }
-                            >
-                              {[1, 2, 3, 4, 5].map((value) => (
-                                <option key={value} value={value}>
-                                  {value}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                              onChange={setQuality}
+                              options={[1, 2, 3, 4, 5].map((value) => ({
+                                value: String(value),
+                                label: String(value),
+                              }))}
+                            />
+                          </div>
                           <button
                             type="button"
                             className="button filled"
@@ -609,18 +614,12 @@ export function StrengthsView({
                           <p className="eyebrow">
                             {t("strengths.scheduleReview")}
                           </p>
-                          <label className="field">
-                            <span>{t("common.date")}</span>
-                            <input
-                              type="date"
-                              className="text-field"
-                              aria-label={t("strengths.reviewDateAria")}
-                              value={dueDate}
-                              onChange={(event) =>
-                                setDueDate(event.target.value)
-                              }
-                            />
-                          </label>
+                          <DateField
+                            label={t("common.date")}
+                            ariaLabel={t("strengths.reviewDateAria")}
+                            value={dueDate}
+                            onChange={setDueDate}
+                          />
                           <button
                             type="button"
                             className="button tonal"

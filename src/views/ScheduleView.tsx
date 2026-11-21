@@ -1,5 +1,6 @@
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import {
+  type CSSProperties,
   type FormEvent,
   useCallback,
   useEffect,
@@ -7,6 +8,8 @@ import {
   useState,
 } from "react";
 import { AttendanceButtons } from "../components/AttendanceButtons";
+import { CustomSelect } from "../components/CustomSelect";
+import { DateField } from "../components/DateField";
 import { safeColor } from "../lib/color";
 import { getDateFnsLocale, useTranslation } from "../lib/i18n";
 import {
@@ -392,6 +395,9 @@ export function ScheduleView({
 
   async function submitException(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!exceptionForm.slotId) {
+      return;
+    }
     await run(async () => {
       await createClassException(
         exceptionForm.slotId,
@@ -495,9 +501,11 @@ export function ScheduleView({
           <p className="eyebrow">{t("common.vaultRequired")}</p>
           <h2>{t("common.chooseVaultFirst")}</h2>
           <p>{vault?.message ?? t("schedule.noVaultBody")}</p>
-          <button type="button" className="button filled" onClick={onGoVault}>
-            {t("common.goToVault")}
-          </button>
+          <div className="hero-actions">
+            <button type="button" className="button filled" onClick={onGoVault}>
+              {t("common.goToVault")}
+            </button>
+          </div>
         </section>
       </>
     );
@@ -530,13 +538,15 @@ export function ScheduleView({
           <p className="eyebrow">{t("schedule.noTermsEyebrow")}</p>
           <h2>{t("schedule.noTermsTitle")}</h2>
           <p>{t("schedule.noTermsBody")}</p>
-          <button
-            type="button"
-            className="button filled"
-            onClick={onGoSubjects}
-          >
-            {t("common.goToSubjects")}
-          </button>
+          <div className="hero-actions">
+            <button
+              type="button"
+              className="button filled"
+              onClick={onGoSubjects}
+            >
+              {t("common.goToSubjects")}
+            </button>
+          </div>
         </section>
       ) : (
         <>
@@ -558,20 +568,19 @@ export function ScheduleView({
                 </p>
               </div>
               <div className="week-tools">
-                <label className="field">
+                <div className="field">
                   <span>{t("common.term")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("common.term")}
                     className="select-field"
                     value={termId ?? ""}
-                    onChange={(event) => void selectTerm(event.target.value)}
-                  >
-                    {terms.map((term) => (
-                      <option key={term.id} value={term.id}>
-                        {term.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    onChange={(value) => void selectTerm(value)}
+                    options={terms.map((term) => ({
+                      value: term.id,
+                      label: term.name,
+                    }))}
+                  />
+                </div>
                 <div className="week-nav">
                   <button
                     type="button"
@@ -632,6 +641,13 @@ export function ScheduleView({
                             <li
                               className={`occurrence kind-${occurrence.kind}`}
                               key={`${occurrence.slotId}-${occurrence.date}-${occurrence.kind}`}
+                              style={
+                                {
+                                  "--subject-color": safeColor(
+                                    occurrence.subjectColor,
+                                  ),
+                                } as CSSProperties
+                              }
                             >
                               <div className="occurrence-head">
                                 <span
@@ -824,47 +840,41 @@ export function ScheduleView({
               )}
 
               <form className="inline-form" onSubmit={submitSlot}>
-                <label className="field">
+                <div className="field">
                   <span>{t("common.subject")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("common.subject")}
                     className="select-field"
                     value={slotForm.subjectId}
-                    onChange={(event) =>
-                      setSlotForm({
-                        ...slotForm,
-                        subjectId: event.target.value,
-                      })
+                    onChange={(value) =>
+                      setSlotForm({ ...slotForm, subjectId: value })
                     }
                     disabled={slotForm.id !== null}
                     required
-                  >
-                    <option value="">{t("common.choose")}</option>
-                    {subjects.map((subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
+                    options={[
+                      { value: "", label: t("common.choose") },
+                      ...subjects.map((subject) => ({
+                        value: subject.id,
+                        label: subject.name,
+                      })),
+                    ]}
+                  />
+                </div>
+                <div className="field">
                   <span>{t("schedule.day")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("schedule.day")}
                     className="select-field"
-                    value={slotForm.weekday}
-                    onChange={(event) =>
-                      setSlotForm({
-                        ...slotForm,
-                        weekday: Number(event.target.value),
-                      })
+                    value={String(slotForm.weekday)}
+                    onChange={(value) =>
+                      setSlotForm({ ...slotForm, weekday: Number(value) })
                     }
-                  >
-                    {weekdayLabels.map((label, index) => (
-                      <option key={label} value={index + 1}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    options={weekdayLabels.map((label, index) => ({
+                      value: String(index + 1),
+                      label,
+                    }))}
+                  />
+                </div>
                 <label className="field narrow">
                   <span>{t("common.start")}</span>
                   <input
@@ -892,22 +902,24 @@ export function ScheduleView({
                     required
                   />
                 </label>
-                <label className="field">
+                <div className="field">
                   <span>{t("schedule.recurrence")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("schedule.recurrence")}
                     className="select-field"
                     value={slotForm.recurrence}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setSlotForm({
                         ...slotForm,
-                        recurrence: event.target.value as Recurrence,
+                        recurrence: value as Recurrence,
                       })
                     }
-                  >
-                    <option value="weekly">{t("schedule.weekly")}</option>
-                    <option value="biweekly">{t("schedule.biweekly")}</option>
-                  </select>
-                </label>
+                    options={[
+                      { value: "weekly", label: t("schedule.weekly") },
+                      { value: "biweekly", label: t("schedule.biweekly") },
+                    ]}
+                  />
+                </div>
                 <label className="field narrow">
                   <span>{t("schedule.rotation")}</span>
                   <input
@@ -923,34 +935,20 @@ export function ScheduleView({
                     placeholder="A"
                   />
                 </label>
-                <label className="field narrow">
-                  <span>{t("schedule.validFrom")}</span>
-                  <input
-                    className="text-field"
-                    type="date"
-                    value={slotForm.validFrom}
-                    onChange={(event) =>
-                      setSlotForm({
-                        ...slotForm,
-                        validFrom: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label className="field narrow">
-                  <span>{t("schedule.validTo")}</span>
-                  <input
-                    className="text-field"
-                    type="date"
-                    value={slotForm.validTo}
-                    onChange={(event) =>
-                      setSlotForm({
-                        ...slotForm,
-                        validTo: event.target.value,
-                      })
-                    }
-                  />
-                </label>
+                <DateField
+                  label={t("schedule.validFrom")}
+                  fieldClassName="field narrow"
+                  value={slotForm.validFrom}
+                  onChange={(validFrom) =>
+                    setSlotForm({ ...slotForm, validFrom })
+                  }
+                />
+                <DateField
+                  label={t("schedule.validTo")}
+                  fieldClassName="field narrow"
+                  value={slotForm.validTo}
+                  onChange={(validTo) => setSlotForm({ ...slotForm, validTo })}
+                />
                 <label className="field">
                   <span>{t("common.room")}</span>
                   <input
@@ -1001,44 +999,43 @@ export function ScheduleView({
                 </span>
               </div>
               <form className="inline-form" onSubmit={submitRotation}>
-                <label className="field">
+                <div className="field">
                   <span>{t("schedule.mode")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("schedule.mode")}
                     className="select-field"
                     value={rotationForm.mode}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setRotationForm({
                         ...rotationForm,
-                        mode: event.target.value as RotationMode,
+                        mode: value as RotationMode,
                       })
                     }
-                  >
-                    <option value="weekly_ab">
-                      {t("schedule.rotationMode.weekly_ab")}
-                    </option>
-                    <option value="parity">
-                      {t("schedule.rotationMode.parity")}
-                    </option>
-                    <option value="day_cycle">
-                      {t("schedule.rotationMode.day_cycle")}
-                    </option>
-                  </select>
-                </label>
-                <label className="field narrow">
-                  <span>{t("schedule.anchor")}</span>
-                  <input
-                    className="text-field"
-                    type="date"
-                    value={rotationForm.anchorDate}
-                    onChange={(event) =>
-                      setRotationForm({
-                        ...rotationForm,
-                        anchorDate: event.target.value,
-                      })
-                    }
-                    required
+                    options={[
+                      {
+                        value: "weekly_ab",
+                        label: t("schedule.rotationMode.weekly_ab"),
+                      },
+                      {
+                        value: "parity",
+                        label: t("schedule.rotationMode.parity"),
+                      },
+                      {
+                        value: "day_cycle",
+                        label: t("schedule.rotationMode.day_cycle"),
+                      },
+                    ]}
                   />
-                </label>
+                </div>
+                <DateField
+                  label={t("schedule.anchor")}
+                  fieldClassName="field narrow"
+                  value={rotationForm.anchorDate}
+                  onChange={(anchorDate) =>
+                    setRotationForm({ ...rotationForm, anchorDate })
+                  }
+                  required
+                />
                 {rotationForm.mode === "day_cycle" ? (
                   <label className="field">
                     <span>{t("schedule.cycleComma")}</span>
@@ -1137,21 +1134,13 @@ export function ScheduleView({
                 </ul>
               )}
               <form className="inline-form" onSubmit={submitHoliday}>
-                <label className="field narrow">
-                  <span>{t("common.date")}</span>
-                  <input
-                    className="text-field"
-                    type="date"
-                    value={holidayForm.date}
-                    onChange={(event) =>
-                      setHolidayForm({
-                        ...holidayForm,
-                        date: event.target.value,
-                      })
-                    }
-                    required
-                  />
-                </label>
+                <DateField
+                  label={t("common.date")}
+                  fieldClassName="field narrow"
+                  value={holidayForm.date}
+                  onChange={(date) => setHolidayForm({ ...holidayForm, date })}
+                  required
+                />
                 <label className="field">
                   <span>{t("common.name")}</span>
                   <input
@@ -1221,61 +1210,51 @@ export function ScheduleView({
                 </ul>
               )}
               <form className="inline-form" onSubmit={submitException}>
-                <label className="field">
+                <div className="field">
                   <span>{t("schedule.slot")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("schedule.slot")}
                     className="select-field"
                     value={exceptionForm.slotId}
-                    onChange={(event) =>
-                      setExceptionForm({
-                        ...exceptionForm,
-                        slotId: event.target.value,
-                      })
+                    onChange={(value) =>
+                      setExceptionForm({ ...exceptionForm, slotId: value })
                     }
                     required
-                  >
-                    <option value="">{t("common.choose")}</option>
-                    {slots.map((slot) => (
-                      <option key={slot.id} value={slot.id}>
-                        {slotLabel(slot.id)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field narrow">
-                  <span>{t("common.date")}</span>
-                  <input
-                    className="text-field"
-                    type="date"
-                    value={exceptionForm.date}
-                    onChange={(event) =>
-                      setExceptionForm({
-                        ...exceptionForm,
-                        date: event.target.value,
-                      })
-                    }
-                    required
+                    options={[
+                      { value: "", label: t("common.choose") },
+                      ...slots.map((slot) => ({
+                        value: slot.id,
+                        label: slotLabel(slot.id),
+                      })),
+                    ]}
                   />
-                </label>
-                <label className="field">
+                </div>
+                <DateField
+                  label={t("common.date")}
+                  fieldClassName="field narrow"
+                  value={exceptionForm.date}
+                  onChange={(date) =>
+                    setExceptionForm({ ...exceptionForm, date })
+                  }
+                  required
+                />
+                <div className="field">
                   <span>{t("common.type")}</span>
-                  <select
+                  <CustomSelect
+                    ariaLabel={t("common.type")}
                     className="select-field"
                     value={exceptionForm.kind}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setExceptionForm({
                         ...exceptionForm,
-                        kind: event.target.value as ExceptionKind,
+                        kind: value as ExceptionKind,
                       })
                     }
-                  >
-                    {Object.entries(kindLabelKeys).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {t(label)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    options={Object.entries(kindLabelKeys).map(
+                      ([value, label]) => ({ value, label: t(label) }),
+                    )}
+                  />
+                </div>
                 {exceptionForm.kind !== "cancelled" ? (
                   <>
                     <label className="field narrow">
