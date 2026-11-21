@@ -2,6 +2,26 @@
 
 Todos los cambios relevantes de Study Planner se registran acá. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado pretende seguir [SemVer](https://semver.org/lang/es/).
 
+## [0.2.4] — 2026-11-21 — Refinamiento visual integral y layout de Estudio corregido
+
+### Agregado
+
+- Tokens de borde opacos (`--border-subtle`, `--border-default`, `--border-strong`, `--border-focus`, `--border-hover`) y superficies de chrome (`--chrome-bg`, `--sidebar-bg`) derivadas del acento activo, con degradación gradual en motores sin `color-mix` ni colores relativos.
+- Estructura reutilizable para filas de listas (`.mini-item-body`, `.mini-item-heading`, `.mini-item-meta`, `.item-badge`) aplicada en Materias, Exámenes, Notas, Estadísticas, Estudio, Horario y Tareas, con badges centrados verticalmente.
+- Eventos de clases y repasos espaciados en el Calendario, con estilos diferenciados y etiquetas accesibles por tipo de evento.
+
+### Cambiado
+
+- Rejilla de detalle 2×2 alineada en Fortalezas, selector de temas más angosto y reparto 50/50 del layout de Estadísticas.
+- Botones y espaciados uniformes en acciones, rejillas y tarjetas; los bordes ya no desaparecen sobre fondos tintados ni en modo oscuro.
+- La app y el snap comparten la versión `0.2.4` y el pipeline de release publica AppImage, `.deb`, `.rpm`, NSIS, MSI, DMG y snap.
+
+### Corregido
+
+- **Estudio:** la subsección de Pomodoro se apila en su columna angosta y sus campos (mínimo 150 px) ya no se superponen con «Prioridad explicable».
+- Encabezados, badges y metadatos de las filas ya no se fusionan en una sola línea, y los trazos en hover siguen visibles en claro y oscuro.
+- Las clases del Horario y los siete días de la vista semanal se reparten en dos columnas sin scroll horizontal.
+
 ## [0.2.3] — 2026-11-21 — Refinamiento de interfaz y bóveda entre dispositivos
 
 ### Agregado

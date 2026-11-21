@@ -1407,15 +1407,15 @@ export function AcademicView({
                       <>
                         <ul className="mini-list">
                           {visibleStudies.map((topic) => (
-                            <li key={topic.topicId} className="mini-item">
-                              <div>
-                                <strong>{topic.name}</strong>
-                                {studySubjectId === "all" ? (
-                                  <span className="quiet">
-                                    {subjectNameById.get(topic.subjectId) ?? ""}
-                                  </span>
-                                ) : null}
-                                <span className="quiet">
+                            <li
+                              key={topic.topicId}
+                              className="mini-item has-badge"
+                            >
+                              <div className="mini-item-body">
+                                <div className="mini-item-heading">
+                                  <strong>{topic.name}</strong>
+                                </div>
+                                <span className="quiet mini-item-meta">
                                   {t("academic.lastReview")}:{" "}
                                   {topic.reviewItem?.lastReviewedAt
                                     ? topic.reviewItem.lastReviewedAt.slice(
@@ -1431,6 +1431,12 @@ export function AcademicView({
                                     : ""}
                                 </span>
                               </div>
+                              {studySubjectId === "all" ? (
+                                <span className="item-badge">
+                                  {subjectNameById.get(topic.subjectId) ??
+                                    t("common.noSubject")}
+                                </span>
+                              ) : null}
                               <div className="task-board-head">
                                 <button
                                   type="button"

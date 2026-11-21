@@ -528,10 +528,12 @@ export function GradesView({
                     ) : (
                       <ul className="mini-list">
                         {scales.map((scale) => (
-                          <li key={scale.id} className="mini-item">
-                            <span>
-                              {scale.name}
-                              <span className="quiet">
+                          <li key={scale.id} className="mini-item has-badge">
+                            <div className="mini-item-body">
+                              <div className="mini-item-heading">
+                                <strong>{scale.name}</strong>
+                              </div>
+                              <span className="quiet mini-item-meta">
                                 {t("grades.scaleMeta", {
                                   min: cpToValue(scale.minCp, scale.precision),
                                   max: cpToValue(scale.maxCp, scale.precision),
@@ -540,11 +542,13 @@ export function GradesView({
                                     scale.precision,
                                   ),
                                 })}
-                                {scale.isDefault
-                                  ? t("grades.defaultSuffix")
-                                  : ""}
                               </span>
-                            </span>
+                            </div>
+                            {scale.isDefault ? (
+                              <span className="item-badge">
+                                {t("grades.defaultBadge")}
+                              </span>
+                            ) : null}
                             <button
                               type="button"
                               className="mini-action danger"
@@ -670,18 +674,17 @@ export function GradesView({
                     <ul className="mini-list">
                       {categories.map((category) => (
                         <li key={category.id} className="mini-item">
-                          <span>
-                            {category.name}
-                            <span className="quiet">
-                              {" "}
-                              · {bpToPercent(category.weightBp)}
+                          <div className="mini-item-body">
+                            <strong>{category.name}</strong>
+                            <span className="quiet mini-item-meta">
+                              {bpToPercent(category.weightBp)}
                               {category.dropLowest > 0
                                 ? t("grades.categoryDropped", {
                                     dropped: category.dropLowest,
                                   })
                                 : ""}
                             </span>
-                          </span>
+                          </div>
                           <button
                             type="button"
                             className="mini-action danger"
@@ -795,9 +798,9 @@ export function GradesView({
                         );
                         return (
                           <li key={entry.id} className="mini-item">
-                            <span>
-                              {entry.title}
-                              <span className="quiet">
+                            <div className="mini-item-body">
+                              <strong>{entry.title}</strong>
+                              <span className="quiet mini-item-meta">
                                 {t("grades.entryMeta", {
                                   category:
                                     category?.name ?? t("common.noCategory"),
@@ -806,7 +809,7 @@ export function GradesView({
                                 })}
                                 {entry.date ? ` · ${entry.date}` : ""}
                               </span>
-                            </span>
+                            </div>
                             <button
                               type="button"
                               className="mini-action danger"

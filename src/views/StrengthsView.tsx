@@ -433,7 +433,7 @@ export function StrengthsView({
 
                       <div className="study-detail-grid">
                         <form
-                          className="inline-form"
+                          className="inline-form study-detail-block"
                           onSubmit={handleAssessment}
                         >
                           <p className="eyebrow">
@@ -471,7 +471,10 @@ export function StrengthsView({
                           </button>
                         </form>
 
-                        <form className="inline-form" onSubmit={handleOverride}>
+                        <form
+                          className="inline-form study-detail-block"
+                          onSubmit={handleOverride}
+                        >
                           <p className="eyebrow">
                             {t("strengths.manualOverride")}
                           </p>
@@ -540,10 +543,8 @@ export function StrengthsView({
                             ) : null}
                           </div>
                         </form>
-                      </div>
 
-                      <div className="study-detail-grid">
-                        <div className="inline-form">
+                        <div className="inline-form study-detail-block">
                           <p className="eyebrow">
                             {t("strengths.spacedReview")}
                           </p>
@@ -610,7 +611,7 @@ export function StrengthsView({
                           </button>
                         </div>
 
-                        <div className="inline-form">
+                        <div className="inline-form study-detail-block">
                           <p className="eyebrow">
                             {t("strengths.scheduleReview")}
                           </p>

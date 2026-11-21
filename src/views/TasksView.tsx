@@ -569,19 +569,20 @@ export function TasksView({
               <ul className="mini-list">
                 {undo.map((entry) => (
                   <li key={entry.id} className="mini-item">
-                    <span>
-                      {entry.action === "delete_task"
-                        ? t("tasks.taskDeleted")
-                        : entry.action}
-                      <span className="quiet">
-                        {" "}
+                    <div className="mini-item-body">
+                      <strong>
+                        {entry.action === "delete_task"
+                          ? t("tasks.taskDeleted")
+                          : entry.action}
+                      </strong>
+                      <span className="quiet mini-item-meta">
                         {t("tasks.expiresAt", {
                           time: new Date(entry.expiresAt).toLocaleTimeString(
                             intlLocale(),
                           ),
                         })}
                       </span>
-                    </span>
+                    </div>
                     <button
                       type="button"
                       className="button tonal"
@@ -698,7 +699,7 @@ export function TasksView({
               {filters.length > 0 ? (
                 <ul className="mini-list">
                   {filters.map((saved) => (
-                    <li key={saved.id} className="mini-item">
+                    <li key={saved.id} className="mini-item row-actions">
                       <button
                         type="button"
                         className="mini-action"

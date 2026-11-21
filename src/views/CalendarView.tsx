@@ -1,10 +1,12 @@
 import {
+  addDays,
   addMonths,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
   format,
   isSameMonth,
+  parseISO,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
@@ -13,14 +15,18 @@ import { CustomSelect } from "../components/CustomSelect";
 import { getDateFnsLocale, useTranslation } from "../lib/i18n";
 import {
   type Exam,
+  getWeekSchedule,
   listAcademicYears,
   listExams,
   listSubjects,
   listTerms,
+  listTopicStudies,
+  type ScheduleOccurrence,
   type Subject,
   searchTasks,
   type Task,
   type Term,
+  type TopicStudy,
   type VaultStatus,
 } from "../lib/ipc";
 
@@ -30,6 +36,11 @@ function messageOf(reason: unknown): string {
 
 function isoDay(date: Date): string {
   return format(date, "yyyy-MM-dd");
+}
+
+/** Normaliza claves con hora o desfase a `YYYY-MM-DD`. */
+function dayKey(value: string): string {
+  return value.slice(0, 10);
 }
 
 const weekdayKeys = [
@@ -61,7 +72,10 @@ export function CalendarView({
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [reviews, setReviews] = useState<TopicStudy[]>([]);
+  const [classes, setClasses] = useState<ScheduleOccurrence[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const today = useMemo(() => isoDay(new Date()), []);
 
   useEffect(() => {
     if (!ready) {
@@ -127,6 +141,18 @@ export function CalendarView({
   );
   const rangeStart = isoDay(gridStart);
   const rangeEnd = isoDay(gridEnd);
+  // El grid del mes empieza en lunes: los lunes de cada semana visible son
+  // los puntos de entrada a `getWeekSchedule`.
+  const weekStarts = useMemo(() => {
+    const result: string[] = [];
+    let cursor = parseISO(rangeStart);
+    const end = parseISO(rangeEnd);
+    while (cursor <= end) {
+      result.push(isoDay(cursor));
+      cursor = addDays(cursor, 7);
+    }
+    return result;
+  }, [rangeStart, rangeEnd]);
 
   useEffect(() => {
     if (!ready) {
@@ -156,6 +182,35 @@ export function CalendarView({
     };
   }, [ready, rangeStart, rangeEnd]);
 
+  useEffect(() => {
+    if (!ready || !termId) {
+      return;
+    }
+    let cancelled = false;
+
+    async function loadAgenda() {
+      try {
+        const [loadedReviews, ...loadedWeeks] = await Promise.all([
+          listTopicStudies(null, today, rangeStart, rangeEnd),
+          ...weekStarts.map((weekStart) => getWeekSchedule(termId, weekStart)),
+        ]);
+        if (!cancelled) {
+          setReviews(loadedReviews);
+          setClasses(loadedWeeks.flatMap((week) => week.occurrences));
+        }
+      } catch (reason) {
+        if (!cancelled) {
+          setError(messageOf(reason));
+        }
+      }
+    }
+
+    void loadAgenda();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, termId, today, rangeStart, rangeEnd, weekStarts]);
+
   const subjectNames = useMemo(() => {
     const map = new Map<string, string>();
     for (const subject of subjects) {
@@ -169,11 +224,19 @@ export function CalendarView({
       string,
       { id: string; label: string; kind: string }[]
     >();
-    for (const exam of exams) {
-      const day = exam.date;
+    const add = (
+      day: string,
+      event: { id: string; label: string; kind: string },
+    ) => {
       const list = map.get(day) ?? [];
+      list.push(event);
+      map.set(day, list);
+    };
+
+    for (const exam of exams) {
+      const day = dayKey(exam.date);
       const subject = subjectNames.get(exam.subjectId);
-      list.push({
+      add(day, {
         id: `exam-${exam.id}`,
         label: subject
           ? t("calendar.examEventWithSubject", {
@@ -183,22 +246,57 @@ export function CalendarView({
           : t("calendar.examEvent", { title: exam.title }),
         kind: "exam",
       });
-      map.set(day, list);
     }
     for (const task of tasks) {
       if (!task.dueDate) {
         continue;
       }
-      const list = map.get(task.dueDate) ?? [];
-      list.push({
+      add(dayKey(task.dueDate), {
         id: `task-${task.id}`,
         label: t("calendar.taskEvent", { title: task.title }),
         kind: "task",
       });
-      map.set(task.dueDate, list);
+    }
+    for (const occurrence of classes) {
+      add(dayKey(occurrence.date), {
+        id: `class-${occurrence.slotId}-${occurrence.date}-${occurrence.startTime}`,
+        label:
+          occurrence.room && occurrence.room.trim() !== ""
+            ? t("calendar.classEventWithRoom", {
+                subject: occurrence.subjectName,
+                time: occurrence.startTime,
+                room: occurrence.room,
+              })
+            : t("calendar.classEvent", {
+                subject: occurrence.subjectName,
+                time: occurrence.startTime,
+              }),
+        kind: "class",
+      });
+    }
+    for (const study of reviews) {
+      const due = study.reviewItem?.dueDate;
+      if (!due) {
+        continue;
+      }
+      const day = dayKey(due);
+      if (day < rangeStart || day > rangeEnd) {
+        continue;
+      }
+      const subject = subjectNames.get(study.subjectId);
+      add(day, {
+        id: `review-${study.topicId}-${day}`,
+        label: subject
+          ? t("calendar.reviewEventWithSubject", {
+              topic: study.name,
+              subject,
+            })
+          : t("calendar.reviewEvent", { topic: study.name }),
+        kind: "review",
+      });
     }
     return map;
-  }, [exams, tasks, subjectNames, t]);
+  }, [exams, tasks, classes, reviews, subjectNames, t, rangeStart, rangeEnd]);
 
   return (
     <>
@@ -325,6 +423,7 @@ export function CalendarView({
                         <span
                           key={event.id}
                           className={`calendar-event is-${event.kind}`}
+                          title={event.label}
                         >
                           {event.label}
                         </span>

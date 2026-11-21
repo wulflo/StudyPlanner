@@ -67,11 +67,31 @@
     color-mix(in srgb, var(--accent) 45%, transparent);
   --md-topbar-shadow: 0 8px 22px -24px rgba(24, 16, 40, 0.25);
   --md-card-bg: color-mix(in srgb, var(--accent) 3%, #ffffff);
-  --md-card-border: color-mix(
+  /* Bordes opacos: no dependen de la transparencia para verse sobre el fondo. */
+  --border-strong: var(--md-sys-color-outline);
+  --border-default: color-mix(
     in srgb,
-    var(--md-sys-color-outline-variant) 62%,
-    transparent
+    var(--md-sys-color-outline) 82%,
+    var(--md-sys-color-surface)
   );
+  --border-subtle: color-mix(
+    in srgb,
+    var(--md-sys-color-outline) 52%,
+    var(--md-sys-color-surface)
+  );
+  --border-focus: var(--md-sys-color-primary);
+  /* Hover: trazo opaco teñido de primary. Mezclarlo con `transparent` hacía
+     que el borde desapareciera al pasar el cursor sobre la caja. */
+  --border-hover: color-mix(
+    in srgb,
+    var(--md-sys-color-primary) 55%,
+    var(--md-sys-color-surface)
+  );
+  --md-card-border: var(--border-default);
+  /* Superficies del chrome: tinte sutil derivado del acento activo. */
+  --chrome-bg: var(--md-sys-color-surface);
+  --sidebar-bg: var(--md-sys-color-surface-container-low);
+  --chrome-border: var(--border-default);
   --md-radius-xs: 8px;
   --md-radius-sm: 10px;
   --md-radius-md: 14px;
@@ -163,11 +183,53 @@
   --md-hero-shadow: 0 16px 36px -32px rgba(0, 0, 0, 0.65);
   --md-topbar-shadow: 0 8px 22px -22px rgba(0, 0, 0, 0.55);
   --md-card-bg: color-mix(in srgb, var(--accent) 4%, #1b1920);
-  --md-card-border: color-mix(
-    in srgb,
-    var(--md-sys-color-outline-variant) 48%,
-    transparent
-  );
+  --md-card-border: var(--border-default);
+  --chrome-bg: var(--md-sys-color-surface);
+  --sidebar-bg: var(--md-sys-color-surface-container-low);
+}
+
+/* Mejora progresiva: el tinte derivado del acento solo se aplica si el motor
+   soporta color-mix. Sin soporte se conservan las superficies planas. */
+@supports (color: color-mix(in oklch, red, blue)) {
+  :root {
+    --chrome-bg: color-mix(
+      in oklch,
+      var(--accent) 7%,
+      var(--md-sys-color-surface)
+    );
+    --sidebar-bg: color-mix(
+      in oklch,
+      var(--accent) 10%,
+      var(--md-sys-color-surface-container-low)
+    );
+  }
+
+  [data-theme="dark"] {
+    --chrome-bg: color-mix(
+      in oklch,
+      var(--accent) 9%,
+      var(--md-sys-color-surface)
+    );
+    --sidebar-bg: color-mix(
+      in oklch,
+      var(--accent) 11%,
+      var(--md-sys-color-surface-container-low)
+    );
+  }
+}
+
+/* Mejora progresiva: rota levemente el hue del acento y fija baja saturación.
+   Si el motor no soporta color relativo, se conservan los color-mix de arriba. */
+@supports (color: hsl(from #ffffff calc(h + 1) 20% 95%)) {
+  :root {
+    --chrome-bg: hsl(from var(--accent) calc(h + 12) 20% 97%);
+    --sidebar-bg: hsl(from var(--accent) calc(h + 12) 18% 95%);
+  }
+
+  [data-theme="dark"] {
+    --chrome-bg: hsl(from var(--accent) calc(h + 12) 15% 12%);
+    --sidebar-bg: hsl(from var(--accent) calc(h + 12) 17% 10%);
+  }
 }
 
 [data-accent="blue"] {
@@ -402,9 +464,8 @@ code,
   gap: 24px;
   height: var(--titlebar-height);
   padding: 0 10px 0 24px;
-  border-bottom: 1px solid
-    color-mix(in srgb, var(--md-sys-color-outline-variant) 45%, transparent);
-  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--chrome-border);
+  background: var(--chrome-bg);
   box-shadow: var(--md-topbar-shadow);
   position: sticky;
   top: 0;
@@ -471,8 +532,7 @@ code,
   align-items: center;
   gap: 2px;
   padding-left: 12px;
-  border-left: 1px solid
-    color-mix(in srgb, var(--md-sys-color-outline-variant) 45%, transparent);
+  border-left: 1px solid var(--border-subtle);
 }
 
 .window-control {
@@ -534,9 +594,8 @@ code,
   flex-direction: column;
   gap: 2px;
   padding: 14px 10px;
-  border-right: 1px solid
-    color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
-  background: var(--md-sys-color-surface-container-low);
+  border-right: 1px solid var(--chrome-border);
+  background: var(--sidebar-bg);
   position: sticky;
   top: var(--titlebar-height);
   align-self: start;
@@ -561,8 +620,7 @@ code,
 .nav-group + .nav-group {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid
-    color-mix(in srgb, var(--md-sys-color-outline-variant) 26%, transparent);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .nav-group-toggle {
@@ -726,15 +784,15 @@ code,
       )
     );
   border: 1px solid
-    color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
+    color-mix(in srgb, var(--md-sys-color-primary) 38%, var(--border-default));
   box-shadow: var(--md-hero-shadow);
 }
 
 [data-theme="dark"] .hero {
   border-color: color-mix(
     in srgb,
-    var(--md-sys-color-primary) 16%,
-    transparent
+    var(--md-sys-color-primary) 30%,
+    var(--border-default)
   );
 }
 
@@ -765,7 +823,7 @@ code,
 
 .hero-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--md-space-3);
   flex-wrap: wrap;
   margin-top: 24px;
 }
@@ -799,7 +857,17 @@ code,
   margin-left: 8px;
 }
 
-:where(.hero-actions, .form-actions, .inline-form, .pomodoro, .task-composer)
+:where(
+    .hero-actions,
+    .form-actions,
+    .inline-form,
+    .pomodoro,
+    .task-composer,
+    .task-board-head,
+    .subject-actions,
+    .week-nav,
+    .study-detail-block
+  )
   > .button
   + .button {
   margin-left: 0;
@@ -923,11 +991,7 @@ code,
 .card:hover,
 .next-card:hover {
   transform: translateY(-3px);
-  border-color: color-mix(
-    in srgb,
-    var(--md-sys-color-primary) 24%,
-    transparent
-  );
+  border-color: var(--border-hover);
   box-shadow: var(--md-elevation-hover);
 }
 
@@ -1292,8 +1356,7 @@ code,
     var(--md-sys-color-surface-container) 62%,
     transparent
   );
-  border: 1px solid
-    color-mix(in srgb, var(--md-sys-color-outline-variant) 34%, transparent);
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   padding: 12px 14px;
   min-width: 0;
@@ -1323,8 +1386,7 @@ code,
     var(--md-sys-color-surface-container) 66%,
     transparent
   );
-  border: 1px solid
-    color-mix(in srgb, var(--md-sys-color-outline-variant) 32%, transparent);
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   padding: 14px 16px;
   color: var(--md-sys-color-on-surface-variant);
@@ -1422,7 +1484,7 @@ code,
   gap: 9px;
   align-self: center;
   border: 1px solid
-    color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
+    color-mix(in srgb, var(--md-sys-color-primary) 38%, var(--border-default));
   border-radius: 999px;
   background: color-mix(
     in srgb,
@@ -1475,7 +1537,7 @@ code,
 .task-composer {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--md-space-3);
   padding: 12px;
   border: 1px solid var(--md-card-border);
   border-radius: var(--md-radius-lg);
@@ -1533,7 +1595,7 @@ code,
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--md-space-3);
 }
 
 .list-toolbar {
@@ -1581,7 +1643,7 @@ code,
   gap: 12px;
   min-width: 0;
   padding: 11px 12px;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   background: color-mix(
     in srgb,
@@ -1594,11 +1656,7 @@ code,
 }
 
 .task-row:hover {
-  border-color: color-mix(
-    in srgb,
-    var(--md-sys-color-primary) 22%,
-    transparent
-  );
+  border-color: var(--border-hover);
   background: color-mix(
     in srgb,
     var(--md-sys-color-surface-container) 86%,
@@ -2175,6 +2233,7 @@ code,
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--md-radius-sm);
   background: var(--md-sys-color-surface-container-lowest);
 }
@@ -2218,7 +2277,7 @@ code,
 .cycle-add-form {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 8px;
+  gap: var(--md-space-3);
   align-items: end;
   width: 100%;
 }
@@ -2227,7 +2286,8 @@ code,
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--md-space-3);
+  margin-top: 4px;
 }
 
 .cycle-subject-edit .form-actions,
@@ -2266,9 +2326,9 @@ code,
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 4px;
   padding: 9px 12px;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   background: color-mix(
     in srgb,
@@ -2283,7 +2343,7 @@ code,
 }
 
 .mini-item:hover {
-  border-color: var(--md-sys-color-outline-variant);
+  border-color: var(--border-strong);
 }
 
 .mini-item.is-active {
@@ -2296,10 +2356,85 @@ code,
   font-size: 0.76rem;
 }
 
+/* Cuerpo de fila: título, badges y metadatos nunca se fusionan en una línea. */
+.mini-item-body,
+.mini-item > div:not(.task-board-head):not(.mini-item-body) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mini-item-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.mini-item-heading > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.item-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 1px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* El badge puede quedar arriba del todo si solo se alinea con el título.
+   Como hermano del cuerpo, se centra respecto de todo el renglón. */
+.mini-item.has-badge {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.mini-item.has-badge > .item-badge,
+.mini-item.has-badge > .task-board-head {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+/* Filas que solo contienen acciones: nombre a la izquierda, botón a la
+   derecha, en lugar de apilar los botones en columna. */
+.mini-item.row-actions {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mini-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .inline-form > .button {
+  grid-column: 1 / -1;
   align-self: end;
   justify-self: start;
   width: auto;
+  margin-top: 4px;
   min-height: 40px;
 }
 
@@ -2355,9 +2490,9 @@ code,
 .inline-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-  padding-top: 4px;
-  border-top: 1px solid var(--md-sys-color-outline-variant);
+  gap: var(--md-space-3);
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .field {
@@ -2792,8 +2927,7 @@ code,
   align-items: flex-start;
   gap: 10px;
   padding: 12px;
-  border: 1px solid
-    color-mix(in srgb, var(--md-sys-color-outline-variant) 34%, transparent);
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   background: color-mix(
     in srgb,
@@ -2806,11 +2940,7 @@ code,
 }
 
 .subject-card:hover {
-  border-color: color-mix(
-    in srgb,
-    var(--md-sys-color-primary) 28%,
-    transparent
-  );
+  border-color: var(--border-hover);
 }
 
 .subject-card h3 {
@@ -2842,7 +2972,7 @@ code,
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 2px;
+  gap: var(--md-space-2);
   flex: 0 0 auto;
 }
 
@@ -2881,7 +3011,7 @@ code,
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: var(--md-space-2);
 }
 
 /* La cabecera del calendario ocupa todo el ancho: el término queda a la
@@ -2923,14 +3053,14 @@ code,
   }
 }
 
+/* Los siete días se reparten en dos columnas para que quepan sin tener que
+   desplazar horizontalmente la vista semanal. */
 .week-grid {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(170px, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: 10px;
   margin-top: 16px;
-  padding-bottom: 4px;
-  overflow-x: auto;
 }
 
 .week-day {
@@ -3008,15 +3138,24 @@ code,
   border-left-color: var(--md-sys-color-secondary);
 }
 
+/* Cada columna de día es angosta: apilar el encabezado evita que el nombre de
+   la materia y la hora compitan por el mismo renglón y se partan en líneas. */
 .occurrence-head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
   font-size: 0.82rem;
 }
 
-.occurrence-head strong {
+.occurrence-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.occurrence-title strong {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -3090,6 +3229,7 @@ code,
   flex-direction: column;
   gap: 2px;
   padding: 8px 12px;
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   background: var(--md-sys-color-surface-container);
 }
@@ -3099,6 +3239,7 @@ code,
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   background: var(--md-sys-color-surface-container);
 }
@@ -3174,6 +3315,7 @@ code,
   gap: 2px;
   min-width: 150px;
   padding: 8px 14px;
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   background: var(--md-sys-color-surface-container);
 }
@@ -3227,8 +3369,7 @@ code,
   min-height: 96px;
   min-width: 0;
   padding: 6px;
-  border: 1px solid
-    color-mix(in srgb, var(--md-sys-color-outline-variant) 46%, transparent);
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   background: color-mix(
     in srgb,
@@ -3242,11 +3383,7 @@ code,
 }
 
 .calendar-day:hover {
-  border-color: color-mix(
-    in srgb,
-    var(--md-sys-color-primary) 32%,
-    transparent
-  );
+  border-color: var(--border-hover);
 }
 
 .calendar-day.is-outside {
@@ -3283,6 +3420,24 @@ code,
 
 .calendar-event.is-task {
   background: color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent);
+  color: var(--md-sys-color-on-surface);
+}
+
+.calendar-event.is-class {
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-secondary) 26%,
+    transparent
+  );
+  color: var(--md-sys-color-on-surface);
+}
+
+.calendar-event.is-review {
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-primary) 28%,
+    var(--md-sys-color-surface-container)
+  );
   color: var(--md-sys-color-on-surface);
 }
 
@@ -3344,7 +3499,28 @@ code,
 
 .study-layout {
   display: grid;
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+/* Pomodoro vive en la columna angosta: con la rejilla de dos columnas de
+   .status-card los campos del formulario (min 150px) se salían de la tarjeta
+   y tapaban "Prioridad explicable". Aquí encabezado y formulario se apilan. */
+.study-layout > .status-card:first-child {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+/* En Estadísticas las dos tarjetas comparten el ancho a partes iguales. */
+.stats-layout {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* El status-card por defecto reserva 180px para el encabezado; en un panel
+   estrecho eso deja la lista en ~30px y el nombre de la materia se sale. */
+.stats-layout > .status-card {
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -3364,12 +3540,78 @@ code,
   align-items: stretch;
 }
 
+/* Una sola cuadrícula para los cuatro bloques: las columnas quedan alineadas
+   entre la fila de autoevaluación/override y la de repaso/fecha. */
 .study-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: 14px;
   padding-top: 12px;
-  border-top: 1px solid var(--md-sys-color-outline-variant);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Cada subsección del detalle (autoevaluación, override, repaso y fecha) es
+   una columna independiente: evita que inputs y botones compartan celda. */
+.inline-form.study-detail-block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--md-space-3);
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--md-radius-md);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-surface-container-low) 68%,
+    transparent
+  );
+}
+
+.study-detail-block > .eyebrow {
+  margin: 0;
+}
+
+.study-detail-block > .button {
+  align-self: flex-start;
+  justify-self: start;
+  width: auto;
+  margin-top: 2px;
+  min-height: 40px;
+}
+
+.study-detail-block .field.narrow {
+  max-width: none;
+}
+
+.study-detail-block .form-actions {
+  margin-top: 2px;
+}
+
+.study-detail-block .form-actions .button {
+  margin-top: 0;
+}
+
+.study-detail-block .stats-list {
+  gap: 6px;
+}
+
+.study-detail-block .stats-list li {
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.study-detail-block .stats-list li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+@media (max-width: 620px) {
+  .study-detail-grid,
+  .week-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .stats-list {
@@ -3434,8 +3676,7 @@ code,
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px solid
-    color-mix(in srgb, var(--md-sys-color-outline-variant) 30%, transparent);
+  border: 1px solid var(--border-default);
   border-radius: var(--md-radius-sm);
   background: color-mix(
     in srgb,
@@ -3444,11 +3685,20 @@ code,
   );
 }
 
-.priority-row > div {
+.priority-row > .priority-body {
   flex: 1;
   min-width: 0;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
+}
+
+.priority-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
 }
 
 .priority-rank {
@@ -3529,6 +3779,7 @@ code,
 
 @media (max-width: 980px) {
   .study-layout,
+  .stats-layout,
   .study-detail-grid,
   .study-cards {
     grid-template-columns: minmax(0, 1fr);

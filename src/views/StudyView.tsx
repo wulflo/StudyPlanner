@@ -524,14 +524,16 @@ export function StudyView({
                   {priorities.slice(0, 10).map((item, index) => (
                     <li key={item.topicId} className="priority-row">
                       <span className="priority-rank">{index + 1}</span>
-                      <div>
-                        <strong>{item.topicName}</strong>{" "}
-                        <span className="quiet">{item.subjectName}</span>{" "}
-                        <span
-                          className={`strength-chip is-${item.classification}`}
-                        >
-                          {t(`study.classification.${item.classification}`)}
-                        </span>
+                      <div className="priority-body">
+                        <div className="priority-heading">
+                          <strong>{item.topicName}</strong>
+                          <span className="quiet">{item.subjectName}</span>
+                          <span
+                            className={`strength-chip is-${item.classification}`}
+                          >
+                            {t(`study.classification.${item.classification}`)}
+                          </span>
+                        </div>
                         <ul className="priority-reasons">
                           {item.reasons.map((reason) => (
                             <li key={reason.code}>
@@ -560,23 +562,27 @@ export function StudyView({
             ) : (
               <ul className="mini-list" aria-label={t("study.sessionsAria")}>
                 {sessions.slice(0, 12).map((session) => (
-                  <li key={session.id} className="mini-item">
-                    <div>
-                      <strong>
-                        {session.subjectId
-                          ? (subjectNames.get(session.subjectId) ??
-                            t("study.deletedSubject"))
-                          : t("common.noSubject")}
-                      </strong>
-                      <span className="quiet">
-                        {t("study.sessionMeta", {
-                          mode: modeLabel(session.mode),
+                  <li key={session.id} className="mini-item has-badge">
+                    <div className="mini-item-body">
+                      <div className="mini-item-heading">
+                        <strong>
+                          {session.subjectId
+                            ? (subjectNames.get(session.subjectId) ??
+                              t("study.deletedSubject"))
+                            : t("common.noSubject")}
+                        </strong>
+                      </div>
+                      <span className="quiet mini-item-meta">
+                        {t("study.sessionMetaShort", {
                           minutes: session.actualMinutes ?? 0,
                           count: session.interruptions,
                           date: formatDateTime(session.startedAt),
                         })}
                       </span>
                     </div>
+                    <span className="item-badge">
+                      {modeLabel(session.mode)}
+                    </span>
                     <button
                       type="button"
                       className="mini-action danger"

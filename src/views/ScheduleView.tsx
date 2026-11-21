@@ -651,16 +651,18 @@ export function ScheduleView({
                               }
                             >
                               <div className="occurrence-head">
-                                <span
-                                  className="subject-dot"
-                                  style={{
-                                    background: safeColor(
-                                      occurrence.subjectColor,
-                                    ),
-                                  }}
-                                  aria-hidden="true"
-                                />
-                                <strong>{occurrence.subjectName}</strong>
+                                <div className="occurrence-title">
+                                  <span
+                                    className="subject-dot"
+                                    style={{
+                                      background: safeColor(
+                                        occurrence.subjectColor,
+                                      ),
+                                    }}
+                                    aria-hidden="true"
+                                  />
+                                  <strong>{occurrence.subjectName}</strong>
+                                </div>
                                 <span className="quiet">
                                   {occurrence.startTime}–{occurrence.endTime}
                                 </span>

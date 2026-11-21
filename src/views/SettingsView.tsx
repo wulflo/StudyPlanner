@@ -668,13 +668,15 @@ export function SettingsView({
               >
                 {notifications.recent.map((record) => (
                   <li key={record.id} className="mini-item">
-                    <div>
-                      <strong>
-                        {t(`settings.notificationKind.${record.kind}`, {
-                          defaultValue: record.kind,
-                        })}
-                      </strong>
-                      <span className="quiet">
+                    <div className="mini-item-body">
+                      <div className="mini-item-heading">
+                        <strong>
+                          {t(`settings.notificationKind.${record.kind}`, {
+                            defaultValue: record.kind,
+                          })}
+                        </strong>
+                      </div>
+                      <span className="quiet mini-item-meta">
                         {eventTime(record.firedAt ?? record.scheduledAt)}
                       </span>
                     </div>

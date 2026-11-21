@@ -230,7 +230,7 @@ export function StatsView({
             </>
           )}
 
-          <div className="study-layout">
+          <div className="study-layout stats-layout">
             <section className="status-card">
               <div>
                 <p className="eyebrow">{t("stats.weakSubjects")}</p>
@@ -250,9 +250,11 @@ export function StatsView({
                 <ul className="mini-list" aria-label={t("stats.weakListAria")}>
                   {stats.weakSubjects.map((item) => (
                     <li key={item.subjectId} className="mini-item">
-                      <div>
-                        <strong>{item.subjectName}</strong>
-                        <span className="quiet">
+                      <div className="mini-item-body">
+                        <div className="mini-item-heading">
+                          <strong>{item.subjectName}</strong>
+                        </div>
+                        <span className="quiet mini-item-meta">
                           {t("stats.weakLine", {
                             weak: item.weakTopics,
                             total: item.topicCount,
@@ -277,12 +279,13 @@ export function StatsView({
               ) : (
                 <ul className="mini-list" aria-label={t("stats.upcomingAria")}>
                   {stats.upcomingReviews.map((review) => (
-                    <li key={review.topicId} className="mini-item">
-                      <div>
-                        <strong>{review.topicName}</strong>
-                        <span className="quiet">
-                          {t("stats.reviewLine", {
-                            subject: review.subjectName,
+                    <li key={review.topicId} className="mini-item has-badge">
+                      <div className="mini-item-body">
+                        <div className="mini-item-heading">
+                          <strong>{review.topicName}</strong>
+                        </div>
+                        <span className="quiet mini-item-meta">
+                          {t("stats.reviewMeta", {
                             date: review.dueDate,
                             relative:
                               review.daysUntil < 0
@@ -297,6 +300,7 @@ export function StatsView({
                           })}
                         </span>
                       </div>
+                      <span className="item-badge">{review.subjectName}</span>
                     </li>
                   ))}
                 </ul>

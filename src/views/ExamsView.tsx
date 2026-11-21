@@ -504,12 +504,16 @@ export function ExamsView({
                         ) : null}
                         <ul className="mini-list">
                           {visibleExams.map((exam) => (
-                            <li key={exam.id} className="mini-item exam-item">
-                              <div>
-                                <strong>{exam.title}</strong>
-                                <span className="quiet">
-                                  {" "}
-                                  · {exam.date}
+                            <li
+                              key={exam.id}
+                              className="mini-item exam-item has-badge"
+                            >
+                              <div className="mini-item-body">
+                                <div className="mini-item-heading">
+                                  <strong>{exam.title}</strong>
+                                </div>
+                                <span className="quiet mini-item-meta">
+                                  {exam.date}
                                   {exam.startTime ? ` ${exam.startTime}` : ""}
                                   {exam.endTime ? `–${exam.endTime}` : ""}
                                   {exam.weightBp !== null
@@ -518,9 +522,6 @@ export function ExamsView({
                                           1,
                                         ),
                                       })
-                                    : ""}
-                                  {exam.resultStatus !== "pending"
-                                    ? ` · ${t(`exams.status.${exam.resultStatus}`)}`
                                     : ""}
                                   {exam.resultScoreCp !== null &&
                                   exam.resultMaxCp !== null
@@ -562,6 +563,11 @@ export function ExamsView({
                                   )
                                 ) : null}
                               </div>
+                              {exam.resultStatus !== "pending" ? (
+                                <span className="item-badge">
+                                  {t(`exams.status.${exam.resultStatus}`)}
+                                </span>
+                              ) : null}
                               <div className="task-board-head">
                                 <button
                                   type="button"
@@ -803,10 +809,10 @@ export function ExamsView({
                     <ul className="mini-list">
                       {topics.map((topic) => (
                         <li key={topic.id} className="mini-item">
-                          <span>
-                            {topic.name}
+                          <div className="mini-item-body">
+                            <strong>{topic.name}</strong>
                             {topic.parentTopicId ? (
-                              <span className="quiet">
+                              <span className="quiet mini-item-meta">
                                 {t("exams.subtopicOf", {
                                   name:
                                     topics.find(
@@ -815,7 +821,7 @@ export function ExamsView({
                                 })}
                               </span>
                             ) : null}
-                          </span>
+                          </div>
                           <button
                             type="button"
                             className="mini-action danger"

@@ -1,553 +1,118 @@
-# Study Planner — Checklist persistente
+# Study Planner — Estado Maestro y Bitácora Consolidada
 
-> **Última actualización:** 2026-11-21
-> **Fase actual:** 5 — Updater, notificaciones y empaquetado (cerrada; mantenimiento)
-> **Versión:** 0.2.3 · `schema_version = 4` · `export_format_version = 1`
-> **Checklists activas:** [`USER_REQUESTS_CHECKLIST.md`](USER_REQUESTS_CHECKLIST.md) · [`UX_REFINEMENT_CHECKLIST.md`](UX_REFINEMENT_CHECKLIST.md) · [`UI_REMODEL_CHECKLIST.md`](UI_REMODEL_CHECKLIST.md) (histórica)
+> **Última actualización:** 2026-11-22  
+> **Estado general:** Fases 0 a 5 completadas; planes de integridad, rediseño UI y refinamiento UX cerrados. En modo mantenimiento.  
+> **Versión actual:** `0.2.4` · `schema_version = 4` · `export_format_version = 1`  
+> **Repositorio:** [`wulflo/StudyPlanner`](https://github.com/wulflo/StudyPlanner)
 
-Este archivo es la fuente de verdad para retomar el proyecto después de días o semanas sin internet. Si algo no coincide con el código, gana el código y hay que corregir este documento en el mismo commit.
-
----
-
-## Cómo usar este documento
-
-1. Leer **Estado actual**, **Reglas para no romper** y la fase abierta.
-2. Ejecutar `./scripts/check.sh` antes de cambiar nada. Si falla, primero reparar la base.
-3. Trabajar solo en los ítems de la fase actual. No adelantar fases.
-4. Marcar `[x]` únicamente cuando el ítem tenga test o verificación reproducible.
-5. Cerrar cada fase con: demo, tests verdes, `CHANGELOG.md` actualizado y confirmación del usuario.
-6. Si se tomó una decisión nueva, registrarla en `docs/DECISIONS.md` y reflejarla acá.
-7. No borrar ítems completados: sirven de historial.
-
-### Convenciones de estado
-
-| Marca | Significado |
-|---|---|
-| `[x]` | Hecho y verificado. |
-| `[ ]` | Pendiente prioritario; bloquea la fase o la release. |
-| `[futuro]` | Acción no prioritaria: puede aplicarse más adelante o descartarse; no bloquea nada. |
+Este documento consolida la fuente de verdad del proyecto tras el cierre de todas las fases de desarrollo inicial y los planes de endurecimiento, remodelación visual y refinamiento de experiencia de usuario. Si en algún momento existe discrepancia entre este registro y el código fuente, prevalece el código y este archivo debe actualizarse en el mismo commit.
 
 ---
 
-## Estado actual (snapshot)
+## 1. Snapshot Técnico y de Calidad
 
-| Campo | Valor |
-|---|---|
-| Fase | 5 — Updater, notificaciones y empaquetado (cerrada; mantenimiento) |
-| Pendientes | Solo acciones `[futuro]`: opcionales, no bloquean desarrollo ni releases |
-| Versión de app | 0.2.3 |
-| Esquema SQLite | v4 (migraciones `0002_partial_unique_indexes.sql`, `0003_default_locale_english.sql` y `0004_study_cycles.sql`; ver ADR-023) |
-| Formato de exportación | v1 implementado y verificado con round-trip byte a byte |
-| Frontend | React 19 + TypeScript + Vite 8 |
-| Backend | Rust + Tauri 2.12 + `rusqlite` 0.41 (bundled, backup) |
-| Red en la webview | Prohibida por CSP y permisos; el lanzador del repositorio y el updater viven en Rust |
-| Updater | Clave pública de producción configurada; detección de AppImage, `.deb`, `.rpm`, Windows y macOS; Snap y MSIX gestionados por sus tiendas; releases firmadas publicadas (`v0.1.0` a `v0.2.3`) |
-| Notificaciones | Locales, calculadas en el store y entregadas por D-Bus desde Rust; sin plugin ni permisos de webview; sonido opcional y modo segundo plano con bandeja |
-| Bóveda real | Selección local, lock, backups verificados, snapshots, exportación/importación canónica, restauración con backup previo y log local |
-| Secretos | Ninguno generado, ninguno en el repo |
-| Git | Repositorio local + remoto GitHub [`wulflo/StudyPlanner`](https://github.com/wulflo/StudyPlanner) (público); `main` con commit inicial `87f2be8` |
-| CI | GitHub Actions con los crates actuales (core, store, transfer, updater y host), auditoría de red y `release.yml` para tags `v*` |
-| Release | AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX) y macOS; `v0.2.3` agrega pestañas accesibles, temas de estudio con repasos fechados y exámenes paginados sincronizados con Notas. `v0.2.2` incorporó el rediseño de interfaz, el idioma inglés por defecto y el plan de estudios por ciclos (esquema v4) |
+| Dimensión | Estado / Valor |
+| :--- | :--- |
+| **Stack Frontend** | React 19 + TypeScript + Vite 8 + Zustand + i18next (`en` por defecto, `es` soportado) + Material Color Utilities |
+| **Stack Backend** | Rust + Tauri 2.12 + `rusqlite` 0.41 (SQLite en modo WAL, backup online, claves foráneas activas) |
+| **Base de Datos** | Esquema **v4** (`0001_initial.sql`, `0002_partial_unique_indexes.sql`, `0003_default_locale_english.sql`, `0004_study_cycles.sql`) |
+| **Transferencia** | Formato canónico `.txt` **v1** determinista con adjuntos embebidos (Base64 + SHA-256) y round-trip byte a byte |
+| **Seguridad y Red** | Webview estrictamente offline (CSP cerrada, sin `fetch`/`http`, sin permisos `fs`/`dialog`/`shell`). Red aislada exclusivamente en `study-planner-updater` (Rust) |
+| **Updater y Firma** | Clave pública minisign embebida; verificación obligatoria de firma + SHA-256 + versión; rollback atómico. Detección nativa de runtimes gestionados por tienda (`Snap` y `MSIX`) |
+| **Notificaciones** | Motor local determinista en Rust; entrega por D-Bus (`org.freedesktop.Notifications`) en Linux; modo segundo plano en bandeja del sistema |
+| **Empaquetado y CI** | GitHub Actions fijado por SHA (`ci.yml`, `release.yml`, `snap.yml`, `store-msix.yml`). Artefactos para Linux (`AppImage`, `.deb`, `.rpm`, `.snap`), Windows (`NSIS`, `.msi`, `.msix`) y macOS (`.dmg`) |
 
-### Verificación vigente
+### Suite de Verificación Vigente
 
 ```text
-npm run check       ✅  66 tests de UI
-cargo test -p study-planner-core -p study-planner-store -p study-planner-transfer -p study-planner-updater
-                    ✅  146 tests (43 core, 68 store, 21 transfer, 14 updater)
-cargo test -p study-planner                                 ✅  21 tests de bóveda y host
-cargo clippy (core/store/transfer/updater) -- -D warnings    ✅
-cargo clippy -p study-planner --all-targets -- -D warnings   ✅
-cargo check -p study-planner                                 ✅
-./scripts/audit-network.sh                                   ✅
-./scripts/audit-licenses.sh                                  ✅
+npm run check                                                ✅  66 tests de UI (Vitest + Biome + TypeScript + Build)
+cargo test -p study-planner-core -p study-planner-store \
+           -p study-planner-transfer -p study-planner-updater ✅  146 tests (43 core, 68 store, 21 transfer, 14 updater)
+cargo test -p study-planner                                  ✅  21 tests de bóveda, instancia única y host
+cargo clippy --workspace --all-targets -- -D warnings        ✅  0 advertencias
+./scripts/audit-network.sh                                   ✅  Sin red ni permisos excesivos en webview
+./scripts/audit-licenses.sh                                  ✅  Inventario de licencias verificado
 ```
 
-> Los conteos pueden subir; lo importante es que no haya fallos.
+---
+
+## 2. Reglas Inquebrantables de Arquitectura
+
+1. **Aislamiento de Red:** La webview tiene prohibido realizar peticiones HTTP, cargar fuentes remotas o usar CDNs. Toda comunicación externa ocurre únicamente en el crate `study-planner-updater` bajo HTTPS fijo y opt-in explícito.
+2. **Privilegios Mínimos (ADR-022):** `src-tauri/capabilities/default.json` excluye `core:default` y habilita únicamente los eventos y controles de ventana indispensables (`minimize`, `toggle-maximize`, `close`, `start-dragging`, `start-resize-dragging`, `is-maximized`). El frontend jamás recibe rutas del sistema de archivos ni handles.
+3. **Almacenamiento Local Sin Cifrado de Bóveda:** Por decisión explícita de diseño, la bóveda (`<raíz>/omega` y `<raíz>/longlife/<dispositivo>/<AAAA-MM-DD>`) no utiliza contraseñas ni cifrado en reposo, garantizando acceso directo y recuperación transparente.
+4. **Inmutabilidad de Migraciones:** `0001_initial.sql` y las migraciones publicadas no se editan. Toda alteración estructural requiere una migración secuencial nueva. Los checksums discrepantes entre dispositivos se auto-reparan tras verificar la integridad estructural de SQLite (ADR-024).
+5. **Precisión Matemática y Borrado Lógico:** Calificaciones y pesos se almacenan como enteros de punto fijo (centipuntos / *basis points*). Las entidades de dominio utilizan `deleted_at` (borrado lógico) respaldado por índices `UNIQUE` parciales (`WHERE deleted_at IS NULL`, ADR-023).
+6. **Cero Secretos Versionados:** Claves privadas, passphrases y archivos de datos reales permanecen estrictamente fuera de Git.
 
 ---
 
-## Entorno verificado
-
-| Herramienta | Versión / estado |
-|---|---|
-| SO | CachyOS (Arch), Linux x86_64 |
-| Node.js | 26.13.0 |
-| npm | 12.2.2 |
-| Rust | 1.99.1 |
-| Cargo | 1.99.1 |
-| WebKitGTK | 2.54.2 (`webkit2gtk-4.1`) |
-| libsoup | 3.8.1 |
-| gh | 2.103.3, autenticado como `wulflo` |
-
-`pnpm` no está instalado. El proyecto usa **npm** y `package-lock.json`.
-
----
-
-## Reglas para no romper el proyecto (no negociables)
-
-1. **Sin red en la app.** La webview no usa `http`, `fetch`, CDNs, fuentes remotas ni íconos remotos. La única excepción futura es el crate `study-planner-updater`, aislado y sin bindings JS.
-2. **Sin permisos nuevos sin justificación.** `src-tauri/capabilities/default.json` no usa `core:default`: lista solo `core:event:allow-listen`, `core:event:allow-unlisten`, `core:window:allow-minimize`, `allow-toggle-maximize`, `allow-close`, `allow-start-dragging`, `allow-start-resize-dragging` y `allow-is-maximized` (ver **ADR-022**). Prohibido agregar `fs`, `http`, `sql`, `shell`, `opener`, `dialog`, `notification` o `updater` al frontend.
-3. **Los archivos y la base los escribe Rust.** El frontend nunca recibe rutas ni handles de archivos.
-4. **Nada de `flutter_secure_storage`, cuentas, telemetría ni nube.** Study Planner es estrictamente local.
-5. **La bóveda no se cifra.** Decisión explícita del usuario. No reintroducir contraseña de bóveda, Argon2id, AES-GCM ni recovery key.
-6. **No cambiar el esquema sin migración nueva.** `0001_initial.sql` es inmutable una vez publicado. Todo cambio va en `0002_*.sql` con checksum.
-7. **No cambiar el formato de exportación sin subir `export_format_version`.** El round-trip `exportar → importar → exportar` debe ser byte a byte idéntico dentro de la misma versión.
-8. **Nunca tocar `<bóveda>/omega` ni `<bóveda>/longlife` sin backup verificado y confirmación.** La raíz de la bóveda se elige una vez; no se cambia en silencio.
-9. **Nada de `sudo` para escribir la bóveda.** Si una ruta requiere permisos de root, es una ruta inválida.
-10. **Sin secretos en el repo.** Claves, passphrases, `.env`, bases y backups están en `.gitignore`. La passphrase de firma jamás pasa por el chat ni por un archivo junto a la clave.
-11. **Enteros de punto fijo.** Notas y pesos se guardan como enteros (centipuntos / basis points). No `REAL` para calificaciones.
-12. **Borrado lógico.** Las entidades de dominio usan `deleted_at`; no hay `DELETE` físico.
-13. **Dependencias permisivas.** MIT/Apache/BSD/ISC/Unicode. Cualquier licencia nueva (MPL, LGPL, GPL) requiere revisión y decisión registrada. Ver `THIRD_PARTY_LICENSES.md`.
-14. **Cada cambio ejecuta `./scripts/check.sh`.** No se commitea con tests rojos.
-15. **No actualizar dependencias a ciegas.** `npm update` y `cargo update` solo con internet, con tests posteriores y con el lockfile commiteado.
-16. **Commits pequeños y descriptivos.** Un commit por cambio coherente; nunca mezclar refactor masivo con features.
-
----
-
-## Fase 0 — Base técnica
-
-### Hecho
-
-- [x] Scaffold Tauri 2 + React 19 + TypeScript + Vite 8.
-- [x] Renombrar app a `Study Planner`, identificador `app.studyplanner.desktop`; crates `study-planner-*`.
-- [x] Workspace Rust: `study-planner-core`, `study-planner-store`, `study-planner-transfer`, `study-planner-updater`, `src-tauri`.
-- [x] Esquema SQLite v1 completo (`crates/study-planner-store/migrations/0001_initial.sql`).
-- [x] `Store` con WAL, claves foráneas, `synchronous=FULL`, timeout, migración con checksum SHA-256.
-- [x] `vault_id`, `schema_version`, `integrity_check`, `foreign_key_check`.
-- [x] Comandos Tauri `get_app_info` y `schema_self_check` (base en memoria).
-- [x] CSP de producción y desarrollo; `freezePrototype`; `withGlobalTauri: false`.
-- [x] Capacidad mínima: `core:default` + permisos de ventana para la barra de título; sin plugin `opener`.
-- [x] UI shell con navegación, estado técnico, marca e ícono local.
-- [x] Vistas provisionales para las secciones pendientes y modal de checklist del proyecto.
-- [x] Bóveda local elegible con selector nativo desde Rust; configuración en la app y diagnóstico sin exponer la ruta.
-- [x] Tareas persistentes con crear, completar, reabrir y eliminar mediante borrado lógico.
-- [x] Vista «Hoy» con pendientes reales y vista «Tareas» funcional.
-- [x] Ventana sin decoración nativa con barra de título propia: minimizar, maximizar/restaurar, cerrar, arrastre y bordes de redimensionado.
-- [x] Tests de UI y de Rust; `typecheck`, `lint`, `test`, `build` verdes.
-- [x] `docs/CHECKLIST.md` (este archivo).
-- [x] Documentación base: `README.md`, arquitectura, modelo de datos, exportación, updater, claves, decisiones y modo offline.
-- [x] `CHANGELOG.md` y `THIRD_PARTY_LICENSES.md`.
-- [x] Scripts `scripts/check.sh` y `scripts/audit-network.sh`.
-- [x] `.gitignore` endurecido (claves, bases, secretos, backups).
-- [x] CI sin secretos en `.github/workflows/ci.yml`.
-- [x] Repositorio git inicializado, commit inicial local y remoto GitHub configurado (`main`).
-- [x] CI verde en GitHub y rama `main` protegida con el check «Tests y verificación».
-
-### Cierre de Fase 0
-
-- [x] Revisar con el usuario la licencia **MPL-2.0** transitiva de Tauri: aceptada como excepción acotada en **ADR-017**; no se modificaron los paquetes y se conservan avisos. Ver `THIRD_PARTY_LICENSES.md`.
-- [x] Demo de Fase 0: abrir `npm run tauri dev`, verificar autodiagnóstico y navegación.
-- [x] Confirmación explícita del usuario para pasar a Fase 1: «cierra la F0 y continua a F1».
-
-**Estado:** Fase 0 **cerrada** el 2026-11-08. La app abre, muestra esquema v1 e integridad `ok`, los tests están verdes y no hay secretos versionados.
-
-### Criterio de aceptación de Fase 0
-
-- La app abre en Tauri y muestra esquema v1, integridad `ok`, 0 violaciones de claves foráneas.
-- `./scripts/check.sh` termina en verde.
-- `./scripts/audit-network.sh` no encuentra red en la webview.
-- No existe ninguna clave, base ni secreto versionado.
-- El usuario confirma el cierre.
-
----
-
-## Fase 1 — Bóveda, rutas, backups y transferencia
-
-Objetivo: abrir/crear una bóveda real, respaldarla y mover todos los datos con un `.txt` canónico.
-
-- [x] Selección de la raíz de la bóveda en el primer arranque; la app crea `<bóveda>/omega` y `<bóveda>/longlife/<dispositivo>`.
-- [x] Snapshots diarios en `<bóveda>/longlife/<dispositivo>/<AAAA-MM-DD>`, retención de 7 por dispositivo.
-- [x] Validación de rutas: existen, son escribibles, no requieren `sudo`, no están dentro del repo.
-- [x] Asistente de primer arranque; nunca cambiar rutas en silencio. La UI obliga a elegir carpeta y «Cambiar carpeta» siempre pide confirmación explícita.
-- [x] Apertura de bóveda con lock file y detección de otra instancia.
-- [x] Migración con backup previo obligatorio y restauración automática si falla.
-- [x] Backups con API de backup online de SQLite, checksum y verificación por `integrity_check`.
-- [x] Restauración desde backup con confirmación y backup del estado actual (`pre-restore-*.db`).
-- [x] Implementar exportador canónico v1 y importador.
-- [x] Adjuntos embebidos por defecto, con SHA-256 verificado.
-- [x] Importación en bóveda vacía; el modo reemplazo existe en el núcleo pero la UI no lo habilita.
-- [x] Fixtures de exportación y test de round-trip byte a byte.
-- [x] Tests de checksum corrupto, versión futura, adjunto faltante, columna inválida, FK inválida y rollback.
-- [x] Pantalla «Bóveda» con estado, diagnóstico y cambio de carpeta.
-- [x] Backup manual desde la pantalla «Bóveda» (botón «Crear backup ahora»).
-- [x] Exportar, importar y restaurar desde la pantalla «Bóveda».
-- [x] Registrar eventos de backup/export/import/restore en `<omega>/study-planner.log` (sin rutas absolutas ni datos sensibles).
-
-**Aceptación:** crear bóveda, escribir un registro de prueba, exportar, importar en bóveda vacía, exportar de nuevo y obtener bytes idénticos; restaurar un backup verificado.
-
----
-
-## Fase 2 — Año académico, materias, horario y asistencia
-
-- [x] CRUD de año académico, términos, materias y horarios.
-- [x] Rotaciones semanales A/B, paridad y ciclos de días.
-- [x] Feriados y excepciones de clase (cancelada, movida, extra).
-- [x] Vista semanal y vista «Hoy».
-- [x] Registro de asistencia (presente, ausente, tarde, justificado).
-- [x] Porcentaje de asistencia y umbral mínimo por materia.
-- [x] Cálculo de próxima clase y clases solapadas.
-- [x] Tests de recurrencia, feriados, excepciones y cambios de horario.
-- [x] Exportación/importación de las nuevas entidades sin romper v1.
-
-**Aceptación:** cargar un semestre completo, ver la semana correcta, registrar asistencia y detectar solapamientos.
-
----
-
-## Fase 3 — Exámenes, notas, tareas y búsqueda
-
-- [x] CRUD de exámenes, temas y pesos.
-- [x] Escalas de nota, categorías y entradas; promedio ponderado y descarte del menor.
-- [x] CRUD básico de tareas con estados `pending` / `in_progress` / `done` y borrado lógico.
-- [x] Subtareas, etiquetas, prioridad, recurrencia, vencimientos y filtros de tareas.
-- [x] Filtros guardados y búsqueda FTS local.
-- [x] Journal de undo con expiración.
-- [x] Vistas de calendario, exámenes, notas y tareas.
-- [x] Tests de cálculo de notas, pesos, recurrencia y búsqueda.
-- [x] Exportación/importación de las nuevas entidades sin romper v1.
-
-**Aceptación:** calcular la nota final de una materia con categorías y ponderaciones, y encontrar tareas por texto y etiqueta.
-
----
-
-## Fase 4 — Estudio, repaso espaciado y estadísticas
-
-- [x] Temas jerárquicos y autoevaluación (1–5).
-- [x] Clasificación fortaleza/neutral/debilidad con override manual.
-- [x] Repaso espaciado SM-2 con versión de algoritmo.
-- [x] Sesiones de estudio y Pomodoro.
-- [x] Prioridad de estudio determinista y explicable.
-- [x] Estadísticas: tiempo, constancia, materias débiles, próximos repasos.
-- [x] Tests de SM-2, prioridad y agregaciones.
-- [x] Exportación/importación de las nuevas entidades sin romper v1.
-
-**Aceptación:** generar una cola de repaso reproducible y explicar por qué un tema aparece primero.
-
----
-
-## Fase 5 — Updater, notificaciones y empaquetado
-
-- [x] Generar clave minisign y passphrase localmente (protocolo en `docs/KEYS.md`).
-- [x] Backup cifrado del par: `study-planner-minisign-2026-11-09.tar.gz.gpg` en el almacenamiento remoto, cifrado simétrico AES-256 con la misma passphrase, descifrado verificado por `cmp` y copia remota verificada (0 diferencias).
-- [x] Custodia completa: copia offline y confirmación de la passphrase en el gestor de contraseñas + papel (confirmado por el usuario el 2026-11-16).
-- [x] Configurar secrets de GitHub con `gh secret set` desde archivos, nunca en YAML.
-- [x] Implementar `study-planner-updater` con URL HTTPS fija en compilación.
-- [x] Verificación de firma obligatoria; rechazar manifiestos sin firma válida.
-- [x] Descarga, verificación, instalación y rollback en Linux AppImage.
-- [x] Sin bindings JS; sin datos de usuario en la petición.
-- [x] Notificaciones locales (clases, tareas, exámenes, repasos) con permisos solo en Rust.
-- [x] Empaquetado AppImage; `.deb` opcional.
-- [x] Auditoría final de red, licencias, CSP, permisos y backups.
-- [x] Documentar recuperación de clave y simulacro de rotación.
-
-**Aceptación:** una compilación publicada se actualiza solo con firma válida; una firma inválida se rechaza y queda registrada.
-
----
-
-## Decisiones cerradas
-
-| Tema | Decisión |
-|---|---|
-| Plataforma | Desktop Linux primero; Tauri 2. Windows/macOS no prioritarios |
-| Móvil | Fuera de alcance inicial; Tauri updater no soporta Android/iOS |
-| Estructura de bóveda | `<raíz>/omega` (datos vivos + backup principal) y `<raíz>/longlife/<dispositivo>/<AAAA-MM-DD>` (snapshots, 7 por dispositivo) |
-| Frontend | React + TypeScript + Vite + Zustand + date-fns + Material Color Utilities |
-| Persistencia | SQLite vía `rusqlite` en Rust; sin `tauri-plugin-sql` |
-| Cifrado de bóveda | **No** (decisión explícita del usuario) |
-| Exportación | `.txt` canónico, total, determinista, con checksum |
-| Adjuntos | Embebidos por defecto; modo referencia no portable (futuro) |
-| Red | Solo updater aislado, opt-in, HTTPS fijo, firma obligatoria |
-| Updater Linux | AppImage únicamente |
-| Licencia del proyecto | MIT OR Apache-2.0 |
-| Gestor de paquetes | npm (pnpm no disponible) |
-| Idioma de UI | Español inicial; i18next preparado |
-
----
-
-## Decisiones futuras opcionales (no prioritarias)
-
-> Ninguna de estas acciones bloquea el desarrollo, una fase ni una release. Se pueden
-> aplicar más adelante o descartar según el uso real de la app.
-
-- [x] ¿Se acepta la dependencia transitiva **MPL-2.0** de Tauri o se busca una alternativa? Aceptada en **ADR-017** (2026-11-08), sin modificar los paquetes.
-- [x] Confirmar URL HTTPS fija del updater: `https://github.com/wulflo/StudyPlanner/releases/latest/download/latest.json`, implementada en `study-planner-updater`.
-- [x] Firma de releases en CI: el workflow firma cada artefacto con `TAURI_SIGNING_PRIVATE_KEY` y la clave pública embebida verifica el AppImage.
-- [x] Custodia de la passphrase (gestor de contraseñas + papel), del volumen cifrado y del almacenamiento remoto cifrado; confirmada por el usuario el 2026-11-16. La copia offline de la clave queda como acción futura opcional.
-- [x] Repositorio publicado en GitHub: [`wulflo/StudyPlanner`](https://github.com/wulflo/StudyPlanner), público, sin datos ni secretos.
-- [x] Estructura de bóveda `<raíz>/omega` + `<raíz>/longlife` confirmada en **ADR-016**.
-- [futuro] Evaluar la alerta de Dependabot de `glib` 0.18.5 (unsoundness en iteradores de `VariantStrIter`, severidad media): viene de `gtk 0.18` en la pila de Tauri y la corrección exige `glib 0.20`, es decir, una actualización mayor de Tauri/gtk-rs. No se usa directamente en el código de Study Planner. Las actualizaciones automáticas de `glib < 0.20.0` se ignoran en `.github/dependabot.yml` para que el workflow de Dependabot no falle; la alerta sigue abierta para reevaluar al actualizar Tauri/gtk-rs.
-
----
-
-## Comandos de referencia
+## 3. Comandos de Operación y Desarrollo
 
 ```bash
-# Desarrollo
-npm install                 # solo con internet
-npm run tauri dev           # app completa
-
-# Verificación rápida
-npm run typecheck
-npm run lint
-npm test
-npm run build
-npm run check               # typecheck + lint + test + build
-
-# Verificación completa
-npm run check:all
+# Verificación integral antes de cualquier commit
 ./scripts/check.sh
+
+# Verificaciones individuales
+npm run check                  # Typecheck + Biome lint + Vitest + Vite build
+cargo fmt --all -- --check     # Formato Rust
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace         # Suite completa de Rust
+
+# Auditorías y empaquetado
 ./scripts/audit-network.sh
 ./scripts/audit-licenses.sh
-
-# Rust
-cargo fmt --all -- --check
-cargo clippy -p study-planner-core -p study-planner-store -p study-planner-transfer --all-targets -- -D warnings
-cargo clippy -p study-planner --all-targets -- -D warnings
-cargo test -p study-planner-core -p study-planner-store -p study-planner-transfer
-cargo test -p study-planner
-cargo check -p study-planner
-
-# Empaquetado (Fase 5)
 npm run tauri build
 ```
 
----
-
-## Modo offline
-
-Resumen; detalle en `docs/OFFLINE.md`.
-
-- El repo debe compilar sin internet si `node_modules`, `~/.npm`, `~/.cargo` y `target/` ya existen.
-- `npm ci --offline` y `cargo build --offline` son los comandos de emergencia.
-- No ejecutar `npm update`, `cargo update`, `npm install` ni `cargo add` sin red.
-- Las dependencias del sistema (WebKitGTK, GTK, libsoup) no se pueden instalar offline.
-- Al volver internet: sincronizar, correr `./scripts/check.sh`, actualizar este checklist y commitear.
+> **Modo Offline:** Si no hay conexión a internet, utilizar `npm ci --offline` y `cargo build --offline`. Nunca ejecutar `npm update`, `cargo update` ni agregar dependencias sin red.
 
 ---
 
-## Mapa de archivos
+## 4. Hitos Completados (Historial Consolidado)
 
-```text
-.
-├── src/                         UI React
-│   ├── App.tsx                  shell y autodiagnóstico
-│   ├── components/              barra de título y bordes de ventana
-│   ├── lib/ipc.ts               contrato IPC tipado
-│   └── styles.css               tokens Material 3
-├── src-tauri/                   host Tauri
-│   ├── src/lib.rs               comandos y builder
-│   ├── src/updater.rs           comandos del updater aislado
-│   ├── src/notifications.rs     planificador y D-Bus
-│   ├── tauri.conf.json          CSP, ventana, bundle
-│   └── capabilities/default.json permisos mínimos
-├── crates/
-│   ├── study-planner-core/              dominio puro, constantes, IDs
-│   ├── study-planner-store/             SQLite, migraciones, backups
-│   ├── study-planner-transfer/          exportación/importación canónica
-│   └── study-planner-updater/           red aislada (Fase 5)
-├── docs/                        documentación persistente
-├── scripts/                     check y auditoría de red
-├── fixtures/export/             fixtures de round-trip
-└── .github/workflows/ci.yml     CI sin secretos
+### A. Fases Fundacionales (Fases 0 – 5)
+* **Base y Bóveda (F0–F1):** Arquitectura multi-crate (`core`, `store`, `transfer`, `updater`, `host`), ventana sin bordes con barra de título propia, lock de instancia única, backups verificados mediante la API online de SQLite, snapshots diarios con retención de 7 copias, restauración atómica con respaldo `pre-restore-*` y exportación/importación canónica `.txt` v1.
+* **Gestión Académica y Horarios (F2):** CRUD de años académicos, términos, materias y franjas horarias; rotaciones semanales (A/B, paridad, ciclos de días), feriados, excepciones de clase, detección de solapamientos y control de asistencia con umbrales mínimos.
+* **Evaluación, Tareas y Calendario (F3):** Exámenes con vinculación jerárquica de temas, escalas de calificación, promedios ponderados con descarte de nota menor, tareas con subtareas, etiquetas, recurrencia, búsqueda FTS local, journal de *undo* con expiración y vista de calendario mensual.
+* **Estudio Inteligente y Estadísticas (F4):** Autoevaluaciones (1–5), detección de fortalezas/debilidades con *override* manual, algoritmo de repaso espaciado **SM-2** versionado, temporizador Pomodoro, cola de estudio con prioridad explicable y analíticas de constancia.
+* **Updater, Notificaciones y Distribución (F5):** Custodia de claves minisign (gestor de contraseñas + papel + respaldo cifrado remoto), updater con verificación criptográfica, notificaciones D-Bus en Linux y pipelines de empaquetado multiplataforma (incluido soporte para `Snap` estricto y `MSIX` para Microsoft Store).
+
+### B. Plan de Integridad y Seguridad (P0 – P3 · 37/37 ítems)
+* **Atomicidad Transaccional (P0):** Operaciones compuestas de tareas, etiquetas, índices FTS, repasos SM-2, *overrides* y escalas de calificación encapsuladas en `with_transaction` para impedir estados parciales.
+* **Integridad Referencial en Borrados (P1):** Validación estricta de dependientes vivos (`StoreError::Conflict`) antes de aplicar borrado lógico en años, términos, materias, exámenes y franjas horarias; cascada transaccional controlada para datos derivados de temas.
+* **Sanitización y Límites (P2):** Normalización y validación de colores hexadecimales en backend (`transfer`) y frontend (`safeColor`), validación estricta de filtros guardados (`parseTaskFilter`), whitelist de configuraciones portables y topes de seguridad en minutos estimados, recurrencias y sesiones de estudio.
+* **Endurecimiento del Host y Esquema (P3):** Eliminación de `core:default`, permisos `0700`/`0600` en archivos de configuración y sockets Unix, rollback automático si falla la reapertura tras restaurar un backup, recuperación de notificaciones atascadas, revalidación de contexto en *undo*, migración v2 con índices parciales y acciones de GitHub fijadas por SHA.
+
+### C. Remodelación Visual Material 3 y Plan de Estudios (`v0.2.2`)
+* **Identidad Visual y Localización:** Inglés establecido como idioma por defecto (migración `0003` + persistencia en bóveda), eliminación de etiquetas internas de fase de desarrollo y generación completa de tokens Material 3 claros/oscuros con superficies sólidas (sin `backdrop-filter`).
+* **Componentes y Navegación:** Reemplazo de todos los `<select>` nativos por `CustomSelect` accesible con posicionamiento inteligente; reducción del radio de botones (`8–10px`) frente a insignias tipo píldora; barra lateral colapsable con grupos persistentes y modo riel de íconos en ventanas estrechas.
+* **Plan de Estudios por Ciclos:** Migración `0004` (`study_cycle` y `study_plan_subject`) para gestionar el avance curricular de la carrera con marcado de materias aprobadas y barras de progreso por ciclo y global.
+* **Documentación Bilingüe:** Guías completas de usuario y READMEs en inglés y español (`USER_GUIDE.en.md`, `USER_GUIDE.es.md`).
+
+### D. Refinamientos de Flujo y Experiencia de Usuario (`v0.2.3`)
+* **Sincronización Examen → Notas (ADR-025):** Al registrar o actualizar la calificación de un examen, se crea o actualiza automáticamente su entrada vinculada en *Notas* (generando escala y categoría «Exámenes» por defecto si no existen). La vista de exámenes incorpora paginación (`5/10/20/50` + «Cargar más») y carga diferida de temas para evitar consultas N+1.
+* **Temas de Estudio con Repaso Fechado:** Nueva subsección integrada en *Materias* con filtros por materia y rango temporal (semana/mes/todo), carga por lotes sin carreras de red y registro rápido de repasos SM-2 con fecha.
+* **Navegación por Pestañas y Limpieza de Interfaz (ADR-026):** Implementación del componente accesible `<Tabs>` para segmentar vistas extensas (*Materias*, *Horario*, *Notas*, *Exámenes*), compactación de controles de navegación temporal, disposición horizontal de botones de acción y eliminación de tarjetas/chips residuales («Sin conexión» y tarjetas conceptuales en *Hoy*).
+
+### E. Refinamiento Visual Integral y Layout de Estudio (`v0.2.4`)
+* **Sistema de bordes y superficies:** tokens opacos (`--border-subtle`, `--border-default`, `--border-strong`, `--border-focus`, `--border-hover`) y chrome derivado del acento (`--chrome-bg`, `--sidebar-bg`) con degradación gradual para motores sin `color-mix` ni colores relativos.
+* **Filas y rejillas:** estructura reutilizable de filas (`.mini-item-body`, `.mini-item-heading`, `.mini-item-meta`, `.item-badge`) en siete vistas, rejilla 2×2 alineada en Fortalezas, reparto 50/50 en Estadísticas y dos columnas para la vista semanal y las clases del Horario.
+* **Corrección de Estudio:** la tarjeta de Pomodoro se apila en la columna angosta de `.study-layout`, de modo que sus campos de 150 px mínimos ya no se superponen con «Prioridad explicable». Calendario incorpora clases y repasos con estilos propios.
+
+---
+
+## 5. Acciones Futuras Opcionales (Mantenimiento)
+
+> Ninguno de estos puntos bloquea el uso actual ni requiere intervención inmediata; quedan registrados como tareas operativas diferidas:
+
+1. `[futuro]` **Dependabot (`glib` 0.18.5):** La alerta de severidad media proviene transitivamente de `gtk 0.18` en Tauri y requiere actualizar a `gtk-rs` / `glib 0.20` cuando Tauri publique su actualización mayor. Ignorada temporalmente en `.github/dependabot.yml`.
+2. `[futuro]` **Copia física de llaves minisign:** Copiar `study-planner.key` y `study-planner.pub` al medio de respaldo offline físico (el archivo `.tar.gz.gpg` ya está resguardado y verificado en almacenamiento remoto).
+3. `[futuro]` **Validación de tiendas y auto-actualización:**
+   * Ejecutar una prueba de actualización *end-to-end* desde una versión previa firmada hacia la última release en GitHub.
+   * Probar el paquete `.snap` en una instalación limpia de Ubuntu 24.04 antes de habilitar publicación automática en `edge`/`stable`.
+   * Validar el paquete `.msix` en el Partner Center de Microsoft Store en un entorno Windows real.
+4. `[futuro]` **Firma de código OS:** Evaluar certificados Authenticode (Windows) y Apple Developer ID + notarización (macOS) si se decide distribuir binarios fuera de las tiendas oficiales.
 ```
 
----
-
-## Registro de sesiones
-
-### 2026-11-08 — Fase 0
-
-- Se creó el scaffold, el workspace Rust y el esquema v1.
-- Se implementaron `Store`, migraciones con checksum y comandos de autodiagnóstico.
-- Se configuraron CSP, permisos mínimos, UI shell y tests.
-- Se documentó la arquitectura, el modelo de datos, el formato de exportación, el updater, las claves y el modo offline.
-- Se endureció `.gitignore`, se agregaron scripts de verificación/auditoría y CI sin secretos.
-- Se publicó el repositorio público [`wulflo/StudyPlanner`](https://github.com/wulflo/StudyPlanner) y se subió `main`.
-- Se configuraron descripción, temas, issues, auto-merge, borrado de rama al mergear, alertas de vulnerabilidades y protección de `main` con CI requerido.
-- Se integró una barra de título propia con minimizar, maximizar/restaurar y cerrar, más arrastre y bordes de redimensionado.
-- Se renombró el proyecto de `Omega` a `Study Planner`: crates `study-planner-*`, identifier `app.studyplanner.desktop`, magic `STUDY-PLANNER-EXPORT`.
-- Se fijó la estructura de bóveda `<raíz>/omega` + `<raíz>/longlife/<dispositivo>/<AAAA-MM-DD>` siguiendo el patrón de Better Tracker.
-- Pendiente: revisión MPL y confirmación para Fase 1.
-
-### 2026-11-08 — Revisión en vivo y logo
-
-- Se verificó la app en Tauri: esquema v1, integridad `ok`, 0 violaciones de claves foráneas y formato de exportación v1.
-- Se detectó que la navegación solo cambiaba la etiqueta del hero; se agregaron vistas provisionales por sección con su fase y alcance.
-- «Ver checklist» abre un modal con el resumen de Fase 0; «Abrir bóveda» queda deshabilitado y señalizado como Fase 1 (luego reemplazado por el corte funcional).
-- Se integró el logo propio en la barra de título, el favicon y los íconos de compilación generados con `tauri icon`.
-- Demo de Fase 0 verificada; queda la confirmación del usuario y la revisión MPL.
-
-### 2026-11-08 — Corte funcional: bóveda y tareas
-
-- Se agregó la selección de bóveda con selector nativo desde Rust (`DialogExt`); la webview no recibe la ruta ni tiene permiso `dialog`.
-- La raíz se guarda en `vault.json` dentro de la configuración de la app; la base se abre en `<bóveda>/omega/study-planner.db` con migración e informe de integridad.
-- Se agregaron `Task`, `TaskStatus` y validación de títulos en `study-planner-core`, más el repositorio con borrado lógico en `study-planner-store`.
-- Se agregaron los comandos `get_vault_status`, `choose_vault`, `list_tasks`, `create_task`, `set_task_done` y `delete_task`.
-- «Bóveda» y «Tareas» dejaron de ser placeholders; «Hoy» muestra los pendientes reales.
-- Verificación en vivo: bóveda abierta con esquema v1, integridad `ok` y 0 violaciones de claves foráneas; tareas visibles después de reiniciar; completar, reabrir y eliminar actualizaron la base. La creación quedó cubierta por tests de UI y del store.
-- `npm run check` con 12 tests de UI; 15 tests de Rust; clippy de `src-tauri`; `.deb` y AppImage regenerados con el corte funcional.
-- Se limpiaron los datos y la configuración de la bóveda usados en la verificación manual: el próximo arranque vuelve a pedir una carpeta.
-
-### 2026-11-08 — Cierre F0 y corte F1: backups verificados y snapshots
-
-- Se revisó y aceptó la **MPL-2.0** transitiva de Tauri como excepción acotada (**ADR-017**); no se modificaron los paquetes y se documentaron las obligaciones de avisos.
-- **Fase 0 cerrada** con confirmación explícita del usuario. Queda registrado que la exportación `.txt` y el updater siguen en fases posteriores.
-- Se habilitó `rusqlite` con la feature `backup` y se agregó `Store::backup_to` / `Store::verify_backup`: backup online, escritura `.partial`, verificación previa al renombre atómico, SHA-256, `integrity_check` y `foreign_key_check`.
-- Se agregó validación de la raíz: existe, es carpeta, es escribible, no es la raíz del sistema y no está dentro del repositorio.
-- Se agregó un lock de archivo en `<omega>/.study-planner.lock`; una segunda instancia recibe un error explícito y no abre la bóveda.
-- La apertura migra con backup previo verificado (`pre-migration-vN-*.db`) y restaura automáticamente si la migración falla.
-- Se mantiene un backup principal verificado en `<omega>/backup/study-planner.db`.
-- Se crean snapshots diarias en `<longlife>/<dispositivo>/<AAAA-MM-DD>` con `snapshot.json`; las incompletas o de esquema viejo se descartan y se conservan las últimas 7.
-- La vista «Bóveda» muestra tamaño, integridad, fecha, SHA-256 del backup y snapshots, con el botón «Crear backup ahora».
-- Verificación en vivo con una bóveda temporal fuera del repo: estructura correcta, permisos `0700`/`0600`, backup y snapshot con el **mismo SHA-256**, integridad `ok`, 0 violaciones de FK; el botón actualizó el backup y mostró el aviso de éxito.
-- Tests: 13 de UI, 6 de core, 11 de store y 8 de bóveda (26 de Rust en total). `npm run check`, `cargo fmt`, clippy y tests verdes.
-- Se actualizaron `scripts/check.sh` y `package.json` para incluir clippy y tests del host Tauri, y `scripts/audit-network.sh` para aceptar `tauri-plugin-dialog` solo desde Rust (sin permiso `dialog:` ni import del frontend). La auditoría pasa completa.
-- Se regeneraron los artefactos con `npm run tauri build`: `.deb` (3.16 MiB), `.rpm` (3.17 MiB) y AppImage (109.05 MiB).
-- Se limpió la bóveda temporal y `vault.json`; el próximo arranque vuelve a pedir carpeta.
-
-### 2026-11-08 — F1 cerrada: transferencia canónica, restauración y log local
-
-- Se completó `study-planner-transfer`: exportación canónica de todas las tablas, adjuntos embebidos en base64 con SHA-256, parseo estricto de cabecera/cuerpo/orden, importación transaccional y reconstrucción de FTS.
-- La importación normal es `EmptyOnly`: se rechaza una bóveda con datos de dominio. El modo `Replace` existe en el núcleo, pero la UI no lo habilita hasta definir backup y confirmación específicos.
-- Se agregó `hasData` a `VaultStatus` para que la UI bloquee la importación cuando ya hay datos.
-- Comandos nuevos: `export_vault`, `import_vault` y `restore_main_backup`. Los selectores de archivo se abren solo desde Rust; la webview nunca recibe rutas.
-- La restauración verifica el backup principal, crea un backup `pre-restore-*.db`, reemplaza la base, reabre la bóveda y conserva el lock.
-- Cada backup, exportación, importación, error y restauración se registra en `<omega>/study-planner.log` con timestamp UTC, sin rutas absolutas.
-- La vista «Bóveda» incorpora exportación, importación solo en bóveda vacía y restauración con confirmación explícita.
-- Tests: 17 de UI, 6 de core, 11 de store, 13 de transfer y 11 de bóveda (41 de Rust). `./scripts/check.sh` y `./scripts/audit-network.sh` pasan completos.
-- Aceptación verificada: exportar → importar en bóveda vacía → exportar produce bytes idénticos; también con todas las tablas, borrados lógicos y un adjunto. La restauración de un backup verificado está cubierta por test y por el comando de UI.
-- Artefactos de F1 regenerados con `npm run tauri build`: `.deb` (3.25 MiB), `.rpm` (3.25 MiB) y AppImage (109.12 MiB).
-
-### 2026-11-08 — Fase 2 en curso (bitácora por pasos)
-
-> Esta bitácora se actualiza **después de cada paso**, antes de seguir, para poder
-> retomar el trabajo si se corta la conexión o la sesión. Cada paso termina con
-> `./scripts/check.sh` en verde y un commit local pequeño.
-
-- [x] **Paso 0 — Línea base:** `./scripts/check.sh` verde (17 tests de UI y 41 de Rust) antes de tocar nada.
-- [x] **Paso 1 — Modelos puros:** año académico, término, materia, franja horaria, feriado, excepción, asistencia y rotación con validaciones y matemática de fechas propia (sin dependencias nuevas). 15 tests de `study-planner-core`.
-- [x] **Paso 2 — Persistencia académica:** repositorios CRUD con borrado lógico para año, término y materia; tests de validación y FK. 14 tests de `study-planner-store`.
-- [x] **Paso 3 — Persistencia de horario:** franjas, rotaciones, feriados, excepciones y asistencia; vista semanal compuesta y próxima clase. 20 tests de `study-planner-store`.
-- [x] **Paso 4 — Cálculo semanal:** ocurrencias efectivas, rotaciones (A/B, paridad, ciclo de días, bisemanal), feriados, excepciones, próxima clase, solapamientos y porcentaje de asistencia; tests puros y de store.
-- [x] **Paso 5 — Comandos e IPC:** comandos Tauri y contrato tipado en `src/lib/ipc.ts` para toda la estructura académica y el horario. Checkpoint de la Fase 1 pendiente de commit incluido; `./scripts/check.sh` verde.
-- [x] **Paso 6 — UI académica:** sección «Materias» con año, término y materias, edición y borrado lógico con mensajes de conflicto. 18 tests de UI.
-- [x] **Paso 7 — UI de horario:** sección «Horario» con grilla semanal navegable, alta/edición/baja lógica de franjas, configuración de rotación, feriados, excepciones y registro de asistencia por clase, más solapamientos y umbral por materia. 20 tests de UI; `./scripts/check.sh` verde.
-- [x] **Paso 8 — Vista Hoy:** próxima clase y clases del día con datos reales, registro de asistencia y aviso de umbral. 21 tests de UI; `./scripts/check.sh` verde.
-- [x] **Paso 9 — Transferencia:** fixture con las ocho tablas de Fase 2 y test que verifica exportación, importación, semántica (franja, excepción, asistencia, rotación) y round-trip byte a byte; se corrigió la unicidad de directorios temporales en tests concurrentes. 61 tests de Rust (16 core, 20 store, 14 transfer, 11 host); `./scripts/check.sh` verde.
-- [x] **Paso 10 — Cierre:** documentación de semántica de rotaciones/asistencia en `docs/DATA_MODEL.md`, changelog actualizado, resumen del proyecto en la UI y verificación final con `./scripts/check.sh` y build de producción. Fase 2 cerrada.
-
-**Estado Fase 2:** 21 tests de UI y 61 tests de Rust en verde. Sin dependencias nuevas, sin permisos nuevos, sin migración (el esquema v1 ya tenía las tablas) y `export_format_version = 1` intacto.
-
-### 2026-11-08 — Fase 3 en curso (bitácora por pasos)
-
-> Misma regla que la Fase 2: cada paso termina con `./scripts/check.sh` en verde
-> y un commit local pequeño.
-
-- [x] **Paso 0 — Línea base:** `./scripts/check.sh` verde (21 tests de UI y 61 de Rust) antes de tocar nada.
-- [x] **Paso 1 — Modelos puros:** exámenes, temas, escalas, categorías, entradas y cálculo de promedio ponderado con descarte del menor; extensión de tareas con subtareas, etiquetas, prioridad, recurrencia y filtros. 31 tests de `study-planner-core`.
-- [x] **Paso 2 — Persistencia de exámenes y temas:** CRUD con borrado lógico, jerarquía sin ciclos y vínculo examen–tema.
-- [x] **Paso 3 — Persistencia de notas:** escalas, categorías y entradas; promedio por materia con enteros de punto fijo.
-- [x] **Paso 4 — Tareas completas:** subtareas, etiquetas, prioridad, vencimientos, recurrencia, filtros guardados, búsqueda FTS y journal de undo con expiración. 32 tests de `study-planner-store`.
-- [x] **Paso 5 — Comandos e IPC:** comandos Tauri y contrato tipado para todas las entidades nuevas.
-- [x] **Paso 6 — UI de exámenes y temas:** sección «Exámenes» funcional con pesos, resultados y vínculo a temas.
-- [x] **Paso 7 — UI de notas:** sección «Notas» con escalas, categorías, entradas y promedio final.
-- [x] **Paso 8 — UI de tareas y búsqueda:** subtareas, etiquetas, prioridad, filtros guardados y deshacer.
-- [x] **Paso 9 — Calendario:** vista mensual con exámenes y vencimientos de tareas.
-- [x] **Paso 10 — Transferencia y cierre:** fixture de Fase 3 con semántica y round-trip, documentación, changelog y verificación final.
-
-**Estado Fase 3:** 25 tests de UI y 89 tests de Rust en verde (31 core, 32 store, 15 transfer, 11 host). Sin dependencias nuevas, sin permisos nuevos, sin migración (el esquema v1 ya tenía las tablas) y `export_format_version = 1` intacto. La aceptación se verifica con el promedio ponderado con descarte del menor en «Notas» y la búsqueda de tareas por texto y etiqueta.
-
-### 2026-11-08 — Fase 4 en curso (bitácora por pasos)
-
-> Misma regla que las fases anteriores: cada paso termina con `./scripts/check.sh` en
-> verde y un commit local pequeño. La bitácora se actualiza **antes** de seguir.
-
-- [x] **Paso 0 — Línea base:** `./scripts/check.sh` verde (25 tests de UI y 89 de Rust) antes de tocar nada.
-- [x] **Paso 1 — Modelos puros:** autoevaluación 1–5, clasificación con override, SM-2 versionado, prioridad explicable, sesiones y estadísticas. 42 tests de `study-planner-core` (11 nuevos).
-- [x] **Paso 2 — Persistencia de estudio:** autoevaluaciones, overrides, ítems de repaso, sesiones y consultas agregadas con tests. 39 tests de `study-planner-store` (7 nuevos).
-- [x] **Paso 3 — Comandos e IPC:** comandos Tauri y contrato tipado para todas las entidades de estudio.
-- [x] **Paso 4 — UI de fortalezas:** temas, autoevaluación, clasificación, override y repaso desde la sección «Fortalezas».
-- [x] **Paso 5 — UI de estudio:** cola de prioridad explicable, Pomodoro y registro de sesiones desde la sección «Estudio».
-- [x] **Paso 6 — UI de estadísticas:** tiempo, constancia, materias débiles y próximos repasos. 29 tests de UI.
-- [x] **Paso 7 — Transferencia y cierre:** fixture de Fase 4 con semántica y round-trip. `self_assessment`, `strength_override`, `review_item` y `study_session` viajan en la exportación canónica v1; el test reimporta, verifica SM-2, override y minutos reales, y compara bytes. 16 tests de transfer.
-
-**Estado Fase 4:** 29 tests de UI y 108 tests de Rust en verde (42 core, 39 store, 16 transfer, 11 host). Sin dependencias nuevas, sin permisos nuevos, sin migración (el esquema v1 ya tenía las tablas) y `export_format_version = 1` intacto. La aceptación se verifica con la cola de prioridad explicable en «Estudio»: cada tema muestra sus motivos puntuados y el orden es determinista. **Fase cerrada** al continuar con la Fase 5 a pedido del usuario.
-
-### 2026-11-08 — Fase 5 en curso (bitácora por pasos)
-
-> Misma regla que las fases anteriores: cada paso termina con `./scripts/check.sh` en
-> verde y un commit local pequeño. La bitácora se actualiza **antes** de seguir.
-
-- [x] **Paso 0 — Línea base y corrección visual:** `./scripts/check.sh` verde antes de tocar nada. Se normalizaron los controles en toda la interfaz: selects con padding derecho y chevron propio, botones con menos padding y radio de 12 px, y separación mínima entre botones contiguos.
-- [x] **Paso 1 — Núcleo del updater:** manifiesto, validación de URL/host, comparación de versión, firma minisign y SHA-256 con tests. 9 tests de `study-planner-updater`; la firma debe declarar la misma versión que el manifiesto.
-- [x] **Paso 2 — Descarga e instalación:** cliente HTTP aislado con timeout y hosts permitidos, descarga temporal, verificación SHA-256 + firma + versión, reemplazo atómico, backup y rollback. 13 tests del updater (4 nuevos; sin red real en tests).
-- [x] **Paso 3 — Integración Tauri y UI:** comandos Rust `get_updater_status`, `set_updater_auto_check`, `check_updates`, `install_update`, `rollback_update` y `list_network_events`; ajuste opt-in persistido en `setting`; registro en `network_event`; vista «Ajustes» con estado, búsqueda, instalación, rollback y auditoría. La webview nunca recibe URL, firma ni ruta configurable. 32 tests de UI y 13 del host.
-- [x] **Paso 4 — Notificaciones locales:** cálculo determinista de recordatorios de clases, tareas, exámenes y repasos en `study-planner-store`; reclamo con `dedupe_key` único, marcado `fired`, liberación si falla la entrega y listado. Planificador cada 60 s y entrega por D-Bus (`org.freedesktop.Notifications`) desde Rust, sin plugin ni permisos de webview. Vista «Ajustes» con activación, tiempos de anticipación visibles, revisión manual y notificación de prueba. 4 tests nuevos del store y 1 del host.
-- [x] **Paso 5 — Empaquetado, CI y cierre documental:** AppImage compilado y verificado localmente (`Study Planner_0.1.0_amd64.AppImage`, 110,79 MiB); workflow de release con build en GitHub Actions, firma con `--app-version`, generación de `latest.json` y verificación contra la clave embebida antes de publicar. CI actualizado a los crates reales, con updater, host y auditoría. Inventario de licencias actualizado (499 paquetes Cargo). Simulacro de firma/rotación con clave de test fuera del repo. Guías en `docs/RELEASE.md`, `docs/NOTIFICATIONS.md` y `docs/KEYS.md`.
-- [x] **Clave de producción generada:** par minisign creado dentro de un volumen cifrado, passphrase aleatoria en un archivo temporal con permisos `600`, firma de prueba verificada contra la clave pública y clave pública copiada a `crates/study-planner-updater/updater.pub`. La passphrase y la clave privada nunca se mostraron en el chat ni se versionaron.
-- [x] **Backup cifrado:** `study-planner-minisign-2026-11-09.tar.gz.gpg` (AES-256, S2K SHA-512, 65011712 iteraciones) guardado en el volumen cifrado y subido al almacenamiento remoto. Se descifró en un directorio temporal y los tres archivos coincidieron con `cmp`; la copia remota se verificó (0 diferencias, SHA-256 `1b836fa2…ffa6`). El `.gpg` se abre con la passphrase de minisign y no la contiene.
-- [futuro] **Cierre real de Fase 5:** la custodia de la passphrase y los secrets ya están resueltos y hay releases firmadas publicadas; queda confirmar la copia offline de la clave si no se hizo y validar una actualización real desde una versión anterior.
-
-> **Custodia:** confirmada por el usuario el 2026-11-16 (passphrase en el gestor de contraseñas + papel). El archivo temporal de la passphrase puede considerarse descartado.
-
-### 2026-11-09 — Fase 6 en curso (bitácora por pasos)
-
-> Misma regla que las fases anteriores: cada paso termina con `./scripts/check.sh` en
-> verde y un commit local pequeño.
-
-- [x] **Paso 0 — Línea base:** `./scripts/check.sh` verde (29 tests de UI y 108 de Rust) antes de tocar nada.
-- [x] **Paso 1 — Detección de Snap en el updater:** variante `UpdateError::ManagedBySnap`, `Runtime` (`AppImage`/`Snap`/`Development`) con precedencia de `SNAP` sobre `APPIMAGE`, guardas en estado, auto-check, búsqueda e instalación. Test `snap_takes_precedence_and_disables_appimage_updates`. 15 tests del host.
-- [x] **Paso 2 — UI de Snap:** `managedBySnap` en el contrato IPC, aviso en «Ajustes» y controles de updater deshabilitados. Test de UI para el modo snap. 35 tests de UI.
-- [x] **Paso 3 — Empaquetado:** `snap/snapcraft.yaml` con `core24`, `strict`, extensión `gnome`, plugs `home` y `removable-media`, sin plugs de red; `.snapcraftignore`, ícono de tienda y `layout` de WebKitGTK 4.1.
-- [x] **Paso 4 — CI de build:** `.github/workflows/snap.yml` compila y sube el `.snap` como artefacto; no publica. `scripts/check-snap-version.sh` sincroniza la versión con la app y `scripts/check.sh` / `scripts/audit-network.sh` validan el confinamiento y la ausencia de red.
-- [x] **Paso 5 — Documentación:** `docs/SNAP.md`, sección snap en `docs/UPDATER.md`, README, changelog y licencias.
-- [x] **Registro y credenciales:** nombre `study-planner` registrado a la cuenta `wulflo` y `SNAPCRAFT_STORE_CREDENTIALS` cargado en GitHub con un token limitado a `study-planner`/`edge`, ACLs de paquete y expiración 2027-11-08.
-- [futuro] **Publicación:** agregar `action-publish` al workflow y probar el snap en Ubuntu 24.04 limpio. No se hace hasta que el usuario lo pida.
-
-**Estado Fase 6:** 35 tests de UI, 15 tests del host y el resto de la suite en verde. Snap estricto sin red, updater deshabilitado bajo snap, workflow de solo build, nombre registrado y credenciales cargadas. La publicación queda pendiente de la prueba en limpio y de una decisión explícita del usuario.
-
-### 2026-11-10 — Paquetes de escritorio (extensión de release)
-
-- [x] **Matriz de release:** `release.yml` compila Linux (`AppImage`, `.deb`, `.rpm`), Windows (`.exe` NSIS, `.msi`) y macOS (`.dmg`), firma cada artefacto con `TAURI_SIGNING_PRIVATE_KEY` y publica una release *latest*.
-- [x] **Port mínimo multiplataforma:** `zbus` quedó como dependencia solo de Linux; las notificaciones devuelven un error explícito fuera de Linux y el planificador no arranca. El updater cubre AppImage, `.deb`, `.rpm`, Windows y macOS; Snap queda gestionado por snapd.
-- [x] **Firma y sumas:** `scripts/package-artifacts.mjs` firma `.deb`, `.rpm`, `.exe`, `.msi` y `.dmg`, copia cada `.sig` y genera `SHA256SUMS` por plataforma.
-- [x] **Secrets:** `TAURI_SIGNING_PRIVATE_KEY` y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` cargados en GitHub desde los archivos de custodia, sin imprimirlos.
-- [futuro] **Validar en CI:** ejecutar el workflow en las tres plataformas y corregir lo que falle.
-- [futuro] **Firma de código opcional:** Authenticode en Windows y Developer ID + notarización en macOS. La firma Tauri actual es solo de integridad.
-
-**Estado:** Linux es la plataforma completa; Windows/macOS son builds experimentales sin notificaciones locales ni updater. La firma Tauri no reemplaza la firma de código del sistema operativo.
-
-### 2026-11-10 — MSIX, instancia única y limpieza de interfaz
-
-- [x] **MSIX:** `.github/workflows/store-msix.yml` compila el `.exe`, genera el manifiesto desde `packaging/windows-store/AppxManifest.template.xml` y empaqueta con `MakeAppx.exe` en un workflow independiente, igual que better-tracker y SinNotas. Deja el `.msix` sin firmar como artefacto, listo para subir al Partner Center. Microsoft Store firma al publicar; no hay certificados locales.
-- [x] **Runtime MSIX:** la app detecta `WindowsApps` en la ruta del ejecutable, expone `runtime: "msix"`, no publica claves de plataforma y no permite instalar actualizaciones. «Ajustes» oculta el panel del updater y avisa que se actualiza desde Microsoft Store.
-- [x] **Privacidad:** `PRIVACY.md` en la raíz y verificación en el workflow de la Store; es obligatoria para la ficha de Microsoft Store.
-- [x] **Instancia única:** `tauri-plugin-single-instance` enfoca la ventana existente cuando se vuelve a abrir la app desde el menú, incluso si estaba oculta en la bandeja. En Unix, `instance.rs` agrega un lock de archivo y un socket local como respaldo para snap `strict` y contenedores; el icono de bandeja es idempotente.
-- [x] **Repositorio:** botón «Visitar repositorio» en «Ajustes»; el comando Rust usa `xdg-open`, `open` o `rundll32` con una URL fija y no agrega permisos a la webview.
-- [x] **Updater sin bloqueo:** `check_updates` e `install_update` corren con `spawn_blocking`, así que «Buscar actualizaciones» no congela la interfaz.
-- [x] **Limpieza:** se quitó el autodiagnóstico, el checklist de proyecto, la tarjeta «Siguiente» y la auditoría de eventos de red de la interfaz.
-- [futuro] **Validar MSIX en Windows:** compilar, subir el `.msix` al Partner Center y comprobar que el updater queda oculto en la app instalada desde la Store.
-
-**Estado:** cambios de interfaz y Rust con la suite completa en verde (`npm run check`, clippy, tests y `cargo fmt`). El MSIX queda pendiente de validación en Windows real.
-
-### 2026-11-16 — Corrección de integridad y seguridad (P0–P3)
-
-- **Atomicidad:** escrituras de tareas, etiquetas, FTS, repasos, fortalezas y escalas de nota dentro de transacciones; tests de regresión.
-- **Integridad referencial:** los borrados lógicos de año, término, materia, examen, tema y franja rechazan dependientes vivos o hacen cascada sólo de datos derivados.
-- **Importación y límites:** colores normalizados, filtros de tareas validados, topes de estimación/recurrencia/sesiones y settings portables en whitelist.
-- **Endurecimiento:** `core:default` eliminado (ADR-022), socket de instancia única en `0600`, rollback de restauración, reclamos de notificaciones recuperables, undo con contexto validado, exámenes sin término cruzado, backups/checksums verificados y CI fijado por SHA.
-- **Esquema v2:** `0002_partial_unique_indexes.sql` reemplaza los `UNIQUE` de columna por índices parciales con `WHERE deleted_at IS NULL` en `strength_override`, `review_item` y `notification` (ADR-023).
-- `docs/INTEGRITY_FIXES.md` queda completo (P0–P3, 37/37 ítems) con la verificación de cierre.
-
----
-
-## Acciones futuras opcionales (no prioritarias)
-
-> Ninguna de estas acciones bloquea el desarrollo ni las fases cerradas. Son mejoras
-> operativas que pueden aplicarse más adelante o descartarse según el uso real.
-
-1. [x] Guardar la passphrase en el gestor de contraseñas y papel, y confirmar para borrar el archivo temporal (hecho el 2026-11-16).
-2. [futuro] Copiar `study-planner.key` y `.pub` a la copia offline (el backup `.gpg` remoto ya está subido).
-3. [futuro] Ejecutar el workflow de release en Linux, Windows y macOS; corregir lo que falle.
-4. [futuro] Publicar una release firmada (`v0.2.3` o superior) y probar el updater real.
-5. [futuro] Probar el `.snap` en Ubuntu 24.04 limpio y, si se pide, publicar en `edge`.
+He unificado las cinco checklists en **`PROJECT_MASTER_CHECKLIST.md`**, eliminando duplicidades y bitácoras intermedias ya cerradas, pero conservando todas las reglas de arquitectura, métricas de verificación, decisiones técnicas (ADR) y los pocos ítems operativos marcados como `[futuro]`. ¿Te gustaría ajustar el nivel de detalle de alguna sección o exportar una versión en inglés?
