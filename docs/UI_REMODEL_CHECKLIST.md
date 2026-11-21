@@ -247,7 +247,8 @@ This checklist is the single source of truth for resuming this UI remodel offlin
 - `docs/CHECKLIST.md` — app version `0.2.2`, schema `v4` (migrations `0003`/`0004`), release row and UI test count.
 - No dependency changes: `package.json` dependencies, `package-lock.json` tree and `THIRD_PARTY_LICENSES.md` unchanged.
 - Verification: `npm run check` green (typecheck, Biome, 66 Vitest tests, production build); `cargo check --locked` green for the five crates at `0.2.2`; `scripts/check-snap-version.sh` green.
-- Release: commit + tag `v0.2.2` pushed to `main`; `ci.yml` and `release.yml` run from the push/tag; `snap.yml` (`stable`) and `store-msix.yml` dispatched manually. `snap-promote.yml` skipped: the Snap workflow publishes directly to the requested channel.
+- Release: commit `690e088` + tag `v0.2.2` pushed to `main`; `ci.yml` and `release.yml` run from the push/tag; `snap.yml` (`stable`) and `store-msix.yml` dispatched manually. `snap-promote.yml` skipped: the Snap workflow publishes directly to the requested channel.
+- Runs: CI `44896563240`, Release `44896564767`, Snap `44896573464`, MSIX `44896576259` (see the Actions tab of `wulflo/StudyPlanner`).
 
 ### Phase E — Bilingual user documentation (done 2026-11-22)
 
