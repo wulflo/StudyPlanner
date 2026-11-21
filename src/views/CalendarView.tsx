@@ -261,7 +261,7 @@ export function CalendarView({
           ) : (
             <>
               <section className="academic-panel">
-                <div className="week-tools">
+                <div className="week-tools calendar-tools">
                   <div className="field">
                     <span>{t("common.term")}</span>
                     <CustomSelect

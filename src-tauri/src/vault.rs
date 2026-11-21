@@ -2304,11 +2304,18 @@ pub fn delete_study_session(id: String, state: State<'_, AppState>) -> Result<()
 pub fn list_topic_studies(
     subject_id: Option<String>,
     today: String,
+    from: Option<String>,
+    to: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<Vec<TopicStudy>, String> {
     with_store(&state, |store| {
         store
-            .list_topic_studies(subject_id.as_deref(), &today)
+            .list_topic_studies_in_range(
+                subject_id.as_deref(),
+                &today,
+                from.as_deref(),
+                to.as_deref(),
+            )
             .map_err(|error| error.to_string())
     })
 }

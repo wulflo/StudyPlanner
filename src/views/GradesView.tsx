@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Trans } from "react-i18next";
 import { CustomSelect } from "../components/CustomSelect";
 import { DateField } from "../components/DateField";
+import { Tabs } from "../components/Tabs";
 import { useTranslation } from "../lib/i18n";
 import {
   createGradeCategory,
@@ -497,365 +498,432 @@ export function GradesView({
             </section>
           ) : null}
 
-          <section className="academic-panel" aria-labelledby="scales-title">
-            <div className="task-board-head">
-              <h2 id="scales-title">{t("grades.scales")}</h2>
-              <span className="count-chip">{scales.length}</span>
-            </div>
-            {scales.length === 0 ? (
-              <div className="hero-actions">
-                <button
-                  type="button"
-                  className="button tonal"
-                  onClick={() => void handleCreateDefaultScale()}
-                >
-                  {t("grades.createDefaultScale")}
-                </button>
-              </div>
-            ) : (
-              <ul className="mini-list">
-                {scales.map((scale) => (
-                  <li key={scale.id} className="mini-item">
-                    <span>
-                      {scale.name}
-                      <span className="quiet">
-                        {t("grades.scaleMeta", {
-                          min: cpToValue(scale.minCp, scale.precision),
-                          max: cpToValue(scale.maxCp, scale.precision),
-                          pass: cpToValue(scale.passCp, scale.precision),
-                        })}
-                        {scale.isDefault ? t("grades.defaultSuffix") : ""}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      className="mini-action danger"
-                      aria-label={t("grades.deleteScaleAria", {
-                        name: scale.name,
-                      })}
-                      onClick={() => void handleDeleteScale(scale)}
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <form className="inline-form" onSubmit={handleCreateScale}>
-              <label className="field">
-                <span>{t("common.name")}</span>
-                <input
-                  className="text-field"
-                  value={scaleForm.name}
-                  onChange={(event) =>
-                    setScaleForm({ ...scaleForm, name: event.target.value })
-                  }
-                />
-              </label>
-              <label className="field narrow">
-                <span>{t("grades.minimum")}</span>
-                <input
-                  className="text-field"
-                  type="number"
-                  step="0.01"
-                  value={scaleForm.min}
-                  onChange={(event) =>
-                    setScaleForm({ ...scaleForm, min: event.target.value })
-                  }
-                />
-              </label>
-              <label className="field narrow">
-                <span>{t("grades.maximum")}</span>
-                <input
-                  className="text-field"
-                  type="number"
-                  step="0.01"
-                  value={scaleForm.max}
-                  onChange={(event) =>
-                    setScaleForm({ ...scaleForm, max: event.target.value })
-                  }
-                />
-              </label>
-              <label className="field narrow">
-                <span>{t("grades.pass")}</span>
-                <input
-                  className="text-field"
-                  type="number"
-                  step="0.01"
-                  value={scaleForm.pass}
-                  onChange={(event) =>
-                    setScaleForm({ ...scaleForm, pass: event.target.value })
-                  }
-                />
-              </label>
-              <label className="field narrow">
-                <span>{t("grades.decimals")}</span>
-                <input
-                  className="text-field"
-                  type="number"
-                  min={0}
-                  max={4}
-                  value={scaleForm.precision}
-                  onChange={(event) =>
-                    setScaleForm({
-                      ...scaleForm,
-                      precision: event.target.value,
-                    })
-                  }
-                />
-              </label>
-              <label className="field">
-                <span>{t("grades.default")}</span>
-                <input
-                  type="checkbox"
-                  checked={scaleForm.isDefault}
-                  onChange={(event) =>
-                    setScaleForm({
-                      ...scaleForm,
-                      isDefault: event.target.checked,
-                    })
-                  }
-                />
-              </label>
-              <button type="submit" className="button tonal">
-                {t("grades.createScale")}
-              </button>
-            </form>
-          </section>
-
-          <section
-            className="academic-panel"
-            aria-labelledby="categories-title"
-          >
-            <div className="task-board-head">
-              <h2 id="categories-title">{t("grades.categories")}</h2>
-              <span className="count-chip">{categories.length}</span>
-            </div>
-            <ul className="mini-list">
-              {categories.map((category) => (
-                <li key={category.id} className="mini-item">
-                  <span>
-                    {category.name}
-                    <span className="quiet">
-                      {" "}
-                      · {bpToPercent(category.weightBp)}
-                      {category.dropLowest > 0
-                        ? t("grades.categoryDropped", {
-                            dropped: category.dropLowest,
-                          })
-                        : ""}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    className="mini-action danger"
-                    aria-label={t("grades.deleteCategoryAria", {
-                      name: category.name,
-                    })}
-                    onClick={() => void handleDeleteCategory(category)}
+          <Tabs
+            label={t("grades.sectionsAria")}
+            initialId="scales"
+            items={[
+              {
+                id: "scales",
+                label: t("grades.scales"),
+                badge: scales.length,
+                content: (
+                  <section
+                    className="academic-panel"
+                    aria-labelledby="scales-title"
                   >
-                    ×
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <form className="inline-form" onSubmit={handleCreateCategory}>
-              <label className="field">
-                <span>{t("common.name")}</span>
-                <input
-                  className="text-field"
-                  value={categoryForm.name}
-                  onChange={(event) =>
-                    setCategoryForm({
-                      ...categoryForm,
-                      name: event.target.value,
-                    })
-                  }
-                  placeholder={t("grades.categoryNamePlaceholder")}
-                />
-              </label>
-              <div className="field">
-                <span>{t("grades.scale")}</span>
-                <CustomSelect
-                  ariaLabel={t("grades.scale")}
-                  className="select-field"
-                  value={categoryForm.scaleId}
-                  onChange={(value) =>
-                    setCategoryForm({ ...categoryForm, scaleId: value })
-                  }
-                  options={[
-                    { value: "", label: t("grades.chooseScale") },
-                    ...scales.map((scale) => ({
-                      value: scale.id,
-                      label: scale.name,
-                    })),
-                  ]}
-                />
-              </div>
-              <label className="field narrow">
-                <span>{t("grades.weight")}</span>
-                <input
-                  className="text-field"
-                  type="number"
-                  step="0.01"
-                  value={categoryForm.weight}
-                  onChange={(event) =>
-                    setCategoryForm({
-                      ...categoryForm,
-                      weight: event.target.value,
-                    })
-                  }
-                />
-              </label>
-              <label className="field narrow">
-                <span>{t("grades.drop")}</span>
-                <input
-                  className="text-field"
-                  type="number"
-                  min={0}
-                  value={categoryForm.dropLowest}
-                  onChange={(event) =>
-                    setCategoryForm({
-                      ...categoryForm,
-                      dropLowest: event.target.value,
-                    })
-                  }
-                />
-              </label>
-              <button
-                type="submit"
-                className="button tonal"
-                disabled={
-                  !categoryForm.scaleId || categoryForm.name.trim().length === 0
-                }
-              >
-                {t("grades.createCategory")}
-              </button>
-            </form>
-          </section>
-
-          <section className="academic-panel" aria-labelledby="entries-title">
-            <div className="task-board-head">
-              <h2 id="entries-title">{t("grades.entries")}</h2>
-              <span className="count-chip">{entries.length}</span>
-            </div>
-            <ul className="mini-list">
-              {entries.map((entry) => {
-                const category = categories.find(
-                  (item) => item.id === entry.categoryId,
-                );
-                return (
-                  <li key={entry.id} className="mini-item">
-                    <span>
-                      {entry.title}
-                      <span className="quiet">
-                        {t("grades.entryMeta", {
-                          category: category?.name ?? t("common.noCategory"),
-                          score: cpToValue(entry.scoreCp, precision),
-                          max: cpToValue(entry.maxCp, precision),
-                        })}
-                        {entry.date ? ` · ${entry.date}` : ""}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      className="mini-action danger"
-                      aria-label={t("grades.deleteEntryAria", {
-                        title: entry.title,
-                      })}
-                      onClick={() => void handleDeleteEntry(entry)}
+                    <div className="task-board-head">
+                      <h2 id="scales-title">{t("grades.scales")}</h2>
+                      <span className="count-chip">{scales.length}</span>
+                    </div>
+                    {scales.length === 0 ? (
+                      <div className="hero-actions">
+                        <button
+                          type="button"
+                          className="button tonal"
+                          onClick={() => void handleCreateDefaultScale()}
+                        >
+                          {t("grades.createDefaultScale")}
+                        </button>
+                      </div>
+                    ) : (
+                      <ul className="mini-list">
+                        {scales.map((scale) => (
+                          <li key={scale.id} className="mini-item">
+                            <span>
+                              {scale.name}
+                              <span className="quiet">
+                                {t("grades.scaleMeta", {
+                                  min: cpToValue(scale.minCp, scale.precision),
+                                  max: cpToValue(scale.maxCp, scale.precision),
+                                  pass: cpToValue(
+                                    scale.passCp,
+                                    scale.precision,
+                                  ),
+                                })}
+                                {scale.isDefault
+                                  ? t("grades.defaultSuffix")
+                                  : ""}
+                              </span>
+                            </span>
+                            <button
+                              type="button"
+                              className="mini-action danger"
+                              aria-label={t("grades.deleteScaleAria", {
+                                name: scale.name,
+                              })}
+                              onClick={() => void handleDeleteScale(scale)}
+                            >
+                              ×
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <form className="inline-form" onSubmit={handleCreateScale}>
+                      <label className="field">
+                        <span>{t("common.name")}</span>
+                        <input
+                          className="text-field"
+                          value={scaleForm.name}
+                          onChange={(event) =>
+                            setScaleForm({
+                              ...scaleForm,
+                              name: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field narrow">
+                        <span>{t("grades.minimum")}</span>
+                        <input
+                          className="text-field"
+                          type="number"
+                          step="0.01"
+                          value={scaleForm.min}
+                          onChange={(event) =>
+                            setScaleForm({
+                              ...scaleForm,
+                              min: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field narrow">
+                        <span>{t("grades.maximum")}</span>
+                        <input
+                          className="text-field"
+                          type="number"
+                          step="0.01"
+                          value={scaleForm.max}
+                          onChange={(event) =>
+                            setScaleForm({
+                              ...scaleForm,
+                              max: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field narrow">
+                        <span>{t("grades.pass")}</span>
+                        <input
+                          className="text-field"
+                          type="number"
+                          step="0.01"
+                          value={scaleForm.pass}
+                          onChange={(event) =>
+                            setScaleForm({
+                              ...scaleForm,
+                              pass: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field narrow">
+                        <span>{t("grades.decimals")}</span>
+                        <input
+                          className="text-field"
+                          type="number"
+                          min={0}
+                          max={4}
+                          value={scaleForm.precision}
+                          onChange={(event) =>
+                            setScaleForm({
+                              ...scaleForm,
+                              precision: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>{t("grades.default")}</span>
+                        <input
+                          type="checkbox"
+                          checked={scaleForm.isDefault}
+                          onChange={(event) =>
+                            setScaleForm({
+                              ...scaleForm,
+                              isDefault: event.target.checked,
+                            })
+                          }
+                        />
+                      </label>
+                      <button type="submit" className="button tonal">
+                        {t("grades.createScale")}
+                      </button>
+                    </form>
+                  </section>
+                ),
+              },
+              {
+                id: "categories",
+                label: t("grades.categories"),
+                badge: categories.length,
+                content: (
+                  <section
+                    className="academic-panel"
+                    aria-labelledby="categories-title"
+                  >
+                    <div className="task-board-head">
+                      <h2 id="categories-title">{t("grades.categories")}</h2>
+                      <span className="count-chip">{categories.length}</span>
+                    </div>
+                    <ul className="mini-list">
+                      {categories.map((category) => (
+                        <li key={category.id} className="mini-item">
+                          <span>
+                            {category.name}
+                            <span className="quiet">
+                              {" "}
+                              · {bpToPercent(category.weightBp)}
+                              {category.dropLowest > 0
+                                ? t("grades.categoryDropped", {
+                                    dropped: category.dropLowest,
+                                  })
+                                : ""}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            className="mini-action danger"
+                            aria-label={t("grades.deleteCategoryAria", {
+                              name: category.name,
+                            })}
+                            onClick={() => void handleDeleteCategory(category)}
+                          >
+                            ×
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <form
+                      className="inline-form"
+                      onSubmit={handleCreateCategory}
                     >
-                      ×
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            <form className="inline-form" onSubmit={handleCreateEntry}>
-              <label className="field">
-                <span>{t("common.title")}</span>
-                <input
-                  className="text-field"
-                  value={entryForm.title}
-                  onChange={(event) =>
-                    setEntryForm({ ...entryForm, title: event.target.value })
-                  }
-                  placeholder={t("common.title")}
-                />
-              </label>
-              <div className="field">
-                <span>{t("grades.category")}</span>
-                <CustomSelect
-                  ariaLabel={t("grades.category")}
-                  className="select-field"
-                  value={entryForm.categoryId}
-                  onChange={(value) =>
-                    setEntryForm({ ...entryForm, categoryId: value })
-                  }
-                  options={[
-                    { value: "", label: t("grades.chooseCategory") },
-                    ...categories.map((category) => ({
-                      value: category.id,
-                      label: category.name,
-                    })),
-                  ]}
-                />
-              </div>
-              <label className="field narrow">
-                <span>{t("exams.score")}</span>
-                <input
-                  className="text-field"
-                  type="number"
-                  step="0.01"
-                  value={entryForm.score}
-                  onChange={(event) =>
-                    setEntryForm({ ...entryForm, score: event.target.value })
-                  }
-                />
-              </label>
-              <label className="field narrow">
-                <span>{t("grades.maximum")}</span>
-                <input
-                  className="text-field"
-                  type="number"
-                  step="0.01"
-                  value={entryForm.max}
-                  onChange={(event) =>
-                    setEntryForm({ ...entryForm, max: event.target.value })
-                  }
-                />
-              </label>
-              <label className="field narrow">
-                <span>{t("grades.weight")}</span>
-                <input
-                  className="text-field"
-                  type="number"
-                  step="0.01"
-                  value={entryForm.weight}
-                  onChange={(event) =>
-                    setEntryForm({ ...entryForm, weight: event.target.value })
-                  }
-                  placeholder={t("common.optional")}
-                />
-              </label>
-              <DateField
-                label={t("common.date")}
-                value={entryForm.date}
-                onChange={(date) => setEntryForm({ ...entryForm, date })}
-              />
-              <button
-                type="submit"
-                className="button tonal"
-                disabled={
-                  !entryForm.categoryId ||
-                  entryForm.title.trim().length === 0 ||
-                  entryForm.score.trim().length === 0
-                }
-              >
-                {t("grades.registerGrade")}
-              </button>
-            </form>
-          </section>
+                      <label className="field">
+                        <span>{t("common.name")}</span>
+                        <input
+                          className="text-field"
+                          value={categoryForm.name}
+                          onChange={(event) =>
+                            setCategoryForm({
+                              ...categoryForm,
+                              name: event.target.value,
+                            })
+                          }
+                          placeholder={t("grades.categoryNamePlaceholder")}
+                        />
+                      </label>
+                      <div className="field">
+                        <span>{t("grades.scale")}</span>
+                        <CustomSelect
+                          ariaLabel={t("grades.scale")}
+                          className="select-field"
+                          value={categoryForm.scaleId}
+                          onChange={(value) =>
+                            setCategoryForm({ ...categoryForm, scaleId: value })
+                          }
+                          options={[
+                            { value: "", label: t("grades.chooseScale") },
+                            ...scales.map((scale) => ({
+                              value: scale.id,
+                              label: scale.name,
+                            })),
+                          ]}
+                        />
+                      </div>
+                      <label className="field narrow">
+                        <span>{t("grades.weight")}</span>
+                        <input
+                          className="text-field"
+                          type="number"
+                          step="0.01"
+                          value={categoryForm.weight}
+                          onChange={(event) =>
+                            setCategoryForm({
+                              ...categoryForm,
+                              weight: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field narrow">
+                        <span>{t("grades.drop")}</span>
+                        <input
+                          className="text-field"
+                          type="number"
+                          min={0}
+                          value={categoryForm.dropLowest}
+                          onChange={(event) =>
+                            setCategoryForm({
+                              ...categoryForm,
+                              dropLowest: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <button
+                        type="submit"
+                        className="button tonal"
+                        disabled={
+                          !categoryForm.scaleId ||
+                          categoryForm.name.trim().length === 0
+                        }
+                      >
+                        {t("grades.createCategory")}
+                      </button>
+                    </form>
+                  </section>
+                ),
+              },
+              {
+                id: "entries",
+                label: t("grades.entries"),
+                badge: entries.length,
+                content: (
+                  <section
+                    className="academic-panel"
+                    aria-labelledby="entries-title"
+                  >
+                    <div className="task-board-head">
+                      <h2 id="entries-title">{t("grades.entries")}</h2>
+                      <span className="count-chip">{entries.length}</span>
+                    </div>
+                    <ul className="mini-list">
+                      {entries.map((entry) => {
+                        const category = categories.find(
+                          (item) => item.id === entry.categoryId,
+                        );
+                        return (
+                          <li key={entry.id} className="mini-item">
+                            <span>
+                              {entry.title}
+                              <span className="quiet">
+                                {t("grades.entryMeta", {
+                                  category:
+                                    category?.name ?? t("common.noCategory"),
+                                  score: cpToValue(entry.scoreCp, precision),
+                                  max: cpToValue(entry.maxCp, precision),
+                                })}
+                                {entry.date ? ` · ${entry.date}` : ""}
+                              </span>
+                            </span>
+                            <button
+                              type="button"
+                              className="mini-action danger"
+                              aria-label={t("grades.deleteEntryAria", {
+                                title: entry.title,
+                              })}
+                              onClick={() => void handleDeleteEntry(entry)}
+                            >
+                              ×
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <form className="inline-form" onSubmit={handleCreateEntry}>
+                      <label className="field">
+                        <span>{t("common.title")}</span>
+                        <input
+                          className="text-field"
+                          value={entryForm.title}
+                          onChange={(event) =>
+                            setEntryForm({
+                              ...entryForm,
+                              title: event.target.value,
+                            })
+                          }
+                          placeholder={t("common.title")}
+                        />
+                      </label>
+                      <div className="field">
+                        <span>{t("grades.category")}</span>
+                        <CustomSelect
+                          ariaLabel={t("grades.category")}
+                          className="select-field"
+                          value={entryForm.categoryId}
+                          onChange={(value) =>
+                            setEntryForm({ ...entryForm, categoryId: value })
+                          }
+                          options={[
+                            { value: "", label: t("grades.chooseCategory") },
+                            ...categories.map((category) => ({
+                              value: category.id,
+                              label: category.name,
+                            })),
+                          ]}
+                        />
+                      </div>
+                      <label className="field narrow">
+                        <span>{t("exams.score")}</span>
+                        <input
+                          className="text-field"
+                          type="number"
+                          step="0.01"
+                          value={entryForm.score}
+                          onChange={(event) =>
+                            setEntryForm({
+                              ...entryForm,
+                              score: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field narrow">
+                        <span>{t("grades.maximum")}</span>
+                        <input
+                          className="text-field"
+                          type="number"
+                          step="0.01"
+                          value={entryForm.max}
+                          onChange={(event) =>
+                            setEntryForm({
+                              ...entryForm,
+                              max: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field narrow">
+                        <span>{t("grades.weight")}</span>
+                        <input
+                          className="text-field"
+                          type="number"
+                          step="0.01"
+                          value={entryForm.weight}
+                          onChange={(event) =>
+                            setEntryForm({
+                              ...entryForm,
+                              weight: event.target.value,
+                            })
+                          }
+                          placeholder={t("common.optional")}
+                        />
+                      </label>
+                      <DateField
+                        label={t("common.date")}
+                        value={entryForm.date}
+                        onChange={(date) =>
+                          setEntryForm({ ...entryForm, date })
+                        }
+                      />
+                      <button
+                        type="submit"
+                        className="button tonal"
+                        disabled={
+                          !entryForm.categoryId ||
+                          entryForm.title.trim().length === 0 ||
+                          entryForm.score.trim().length === 0
+                        }
+                      >
+                        {t("grades.registerGrade")}
+                      </button>
+                    </form>
+                  </section>
+                ),
+              },
+            ]}
+          />
         </>
       )}
     </>

@@ -72,7 +72,6 @@ const en = {
     },
   },
   app: {
-    localChip: "Offline",
     tagline: "Local · no accounts · no telemetry",
   },
   today: {
@@ -94,23 +93,6 @@ const en = {
     firstTaskNotice:
       "Create your first task in the Tasks section or from the button above.",
     pendingAria: "Pending tasks",
-    principlesAria: "Project principles",
-    dataKicker: "Data",
-    dataTitle: "Local vault",
-    dataBody:
-      "Live data in <code>&lt;vault&gt;/omega</code> and future snapshots in <code>&lt;vault&gt;/longlife</code>.",
-    portabilityKicker: "Portability",
-    portabilityTitle: "Complete export",
-    portabilityBody:
-      "A single canonical <code>.txt</code> file with checksum and byte-for-byte round-trip.",
-    privacyKicker: "Privacy",
-    privacyTitle: "No network",
-    privacyBody:
-      "The webview has no file, SQL or HTTP permissions. The only network module will be the updater.",
-    continuityKicker: "Continuity",
-    continuityTitle: "Resumable",
-    continuityBody:
-      "Every update is tested and documented so you can keep working without losing context.",
     reopen: "Reopen",
     complete: "Complete",
     done: "Done",
@@ -301,6 +283,8 @@ const en = {
     noVaultBody:
       "Choose a folder in Vault and come back to load your academic year.",
     loading: "Loading academic structure…",
+    sectionsAria: "Academic structure subsections",
+    structureTab: "Years and terms",
     yearsTitle: "Academic years",
     noYears: "No years loaded yet.",
     termsTitle: "Terms",
@@ -340,6 +324,38 @@ const en = {
     noExtra: "No additional data",
     attendanceLabel: "Minimum attendance:",
     noThreshold: "no threshold",
+    studyTopicsTitle: "Study topics",
+    studyTopicsCopy:
+      "Save the topics of each subject and record every review with its date. Reviews feed the spaced repetition (SM-2) used in Strengths.",
+    studySubject: "Subject for study topics",
+    topicSubject: "Topic subject",
+    allSubjects: "All subjects",
+    studyRangeAria: "Scheduled period for topics",
+    studyRange: {
+      week: "Week",
+      month: "Month",
+      all: "All",
+    },
+    noStudyTopicsRange: "No topics scheduled in this period.",
+    nextExam: "Next exam",
+    showMoreTopics: "Show more ({{shown}} of {{total}})",
+    studyTopicName: "Topic",
+    studyTopicNamePlaceholder: "Matrices and determinants",
+    studyTopicDescription: "Description (optional)",
+    addStudyTopic: "Add topic",
+    noStudyTopics: "This subject has no saved topics yet.",
+    chooseStudySubject: "Choose a subject first.",
+    studyTopicCreated: "Topic saved.",
+    studyTopicDeleted: "Topic «{{name}}» deleted.",
+    deleteStudyTopicAria: "Delete topic «{{name}}»",
+    lastReview: "Last review",
+    nextReview: "Next review",
+    neverReviewed: "not reviewed yet",
+    noReviewDate: "no date",
+    reviewQuality: "Review quality",
+    reviewDate: "Review date",
+    markReview: "Mark review",
+    studyReviewRegistered: "Review recorded. Next due date: {{date}}.",
     studyPlanTitle: "Study plan",
     studyPlanCopy:
       "Every subject of your degree, grouped by cycles. This is not the term list: add them here and tick each one as you pass it.",
@@ -384,6 +400,7 @@ const en = {
   },
   schedule: {
     eyebrow: "Schedule · weeks and rotations",
+    sectionsAria: "Schedule management subsections",
     title: "Weekly schedule",
     copyReady:
       "Rotations, holidays and exceptions are applied to the week. Attendance is recorded per class and feeds each subject's threshold.",
@@ -512,6 +529,7 @@ const en = {
   },
   exams: {
     eyebrow: "Exams · topics and weights",
+    sectionsAria: "Exam subsections",
     title: "Exams",
     copy: "Dates, weights, results and linked topics. All local with no network dependencies.",
     noVaultBody:
@@ -519,6 +537,10 @@ const en = {
     noSubjectsBody: "Exams are linked to a subject and a term.",
     listTitle: "Exams",
     noExams: "No exams yet.",
+    pageSize: "Exams per page",
+    showing: "Showing {{shown}} of {{total}}",
+    loadMore: "Load more",
+    loadingLinks: "Loading linked topics…",
     weightSuffix: " · weight {{weight}} %",
     scoreSuffix: " · {{score}} / {{max}}",
     deleteExamAria: "Delete exam {{title}}",
@@ -548,6 +570,7 @@ const en = {
   },
   grades: {
     eyebrow: "Grades · fixed point",
+    sectionsAria: "Grade subsections",
     title: "Grades",
     copy: "Scales, categories and entries with weighted average and lowest-score dropping. Calculations use integers: centipoints and basis points.",
     noVaultBody:

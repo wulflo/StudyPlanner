@@ -68,12 +68,6 @@ pub enum StoreError {
     SchemaTooNew { found: i64, supported: i64 },
     #[error("metadato requerido ausente: {0}")]
     MissingMeta(&'static str),
-    #[error("falta el registro de la migración {0}; la base fue modificada fuera de Study Planner")]
-    MissingMigration(i64),
-    #[error(
-        "el checksum de la migración {version} no coincide; la base fue modificada fuera de Study Planner"
-    )]
-    MigrationChecksum { version: i64 },
     #[error("tarea inválida: {0}")]
     InvalidTask(&'static str),
     #[error("examen o tema inválido: {0}")]
@@ -179,8 +173,12 @@ impl Store {
         Ok(())
     }
 
-    /// Aplica las migraciones pendientes y verifica el checksum de las ya
-    /// aplicadas. Una base alterada fuera de la app se rechaza.
+    /// Aplica las migraciones pendientes y alinea el checksum registrado de las
+    /// ya aplicadas. Una diferencia de checksum se repara: el texto de las
+    /// migraciones embebidas puede cambiar entre compilaciones, equipos o
+    /// sincronizaciones aunque el esquema real siga siendo correcto. La
+    /// integridad real se verifica con `integrity_check`, `foreign_key_check` y
+    /// `PRAGMA user_version`.
     pub fn migrate(&mut self) -> Result<(), StoreError> {
         let current: i64 = self
             .conn
@@ -235,7 +233,11 @@ impl Store {
         Ok(())
     }
 
-    /// Comprueba que cada migración aplicada tenga su fila y su checksum.
+    /// Alinea la fila de `schema_migration` de cada migración ya aplicada.
+    ///
+    /// Si falta la fila se inserta; si el nombre o el checksum no coinciden se
+    /// actualizan con el valor de esta compilación. La operación es idempotente
+    /// y no toca `applied_at`.
     fn verify_applied_migrations(&self, current: i64) -> Result<(), StoreError> {
         let has_table: i64 = self.conn.query_row(
             "SELECT count(*) FROM sqlite_master
@@ -247,24 +249,39 @@ impl Store {
             return Ok(());
         }
 
-        for (version, _, sql) in MIGRATIONS
+        for (version, name, sql) in MIGRATIONS
             .iter()
             .copied()
             .filter(|(version, _, _)| *version <= current)
         {
-            let checksum: Option<String> = self
+            let checksum = sha256_hex(sql.as_bytes());
+            let registered: Option<(String, String)> = self
                 .conn
                 .query_row(
-                    "SELECT checksum FROM schema_migration WHERE version = ?1",
+                    "SELECT name, checksum FROM schema_migration WHERE version = ?1",
                     params![version],
-                    |row| row.get(0),
+                    |row| Ok((row.get(0)?, row.get(1)?)),
                 )
                 .optional()?;
-            let Some(checksum) = checksum else {
-                return Err(StoreError::MissingMigration(version));
-            };
-            if checksum != sha256_hex(sql.as_bytes()) {
-                return Err(StoreError::MigrationChecksum { version });
+
+            match registered {
+                Some((registered_name, registered_checksum))
+                    if registered_name == name && registered_checksum == checksum => {}
+                Some(_) => {
+                    self.conn.execute(
+                        "UPDATE schema_migration
+                         SET name = ?2, checksum = ?3
+                         WHERE version = ?1",
+                        params![version, name, checksum],
+                    )?;
+                }
+                None => {
+                    self.conn.execute(
+                        "INSERT INTO schema_migration(version, name, checksum)
+                         VALUES (?1, ?2, ?3)",
+                        params![version, name, checksum],
+                    )?;
+                }
             }
         }
         Ok(())
@@ -546,21 +563,52 @@ mod tests {
     }
 
     #[test]
-    fn rejects_a_tampered_migration_checksum() {
+    fn repairs_a_tampered_migration_checksum() {
         let mut store = migrated_store();
         store
             .connection()
             .execute(
-                "UPDATE schema_migration SET checksum = 'alterado' WHERE version = 1",
+                "UPDATE schema_migration
+                 SET name = 'nombre-alterado', checksum = 'alterado'
+                 WHERE version = 1",
                 [],
             )
             .unwrap();
 
-        let error = store.migrate().expect_err("checksum alterado");
-        assert!(matches!(
-            error,
-            StoreError::MigrationChecksum { version: 1 }
-        ));
+        store.migrate().expect("el checksum se repara, no bloquea");
+
+        let (name, checksum): (String, String) = store
+            .connection()
+            .query_row(
+                "SELECT name, checksum FROM schema_migration WHERE version = 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(name, "0001_initial");
+        assert_eq!(checksum, sha256_hex(INITIAL_SQL.as_bytes()));
+        assert_eq!(store.schema_version().unwrap(), i64::from(SCHEMA_VERSION));
+    }
+
+    #[test]
+    fn restores_a_missing_migration_row() {
+        let mut store = migrated_store();
+        store
+            .connection()
+            .execute("DELETE FROM schema_migration WHERE version = 1", [])
+            .unwrap();
+
+        store.migrate().expect("la fila faltante se repone");
+
+        let checksum: String = store
+            .connection()
+            .query_row(
+                "SELECT checksum FROM schema_migration WHERE version = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(checksum, sha256_hex(INITIAL_SQL.as_bytes()));
     }
 
     #[test]

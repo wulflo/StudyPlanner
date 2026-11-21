@@ -321,36 +321,6 @@ function TodayView({
           )}
         </section>
       ) : null}
-
-      <section className="cards" aria-label={t("today.principlesAria")}>
-        <article className="card">
-          <span className="card-kicker">{t("today.dataKicker")}</span>
-          <h2>{t("today.dataTitle")}</h2>
-          <p>
-            <Trans i18nKey="today.dataBody" components={{ code: <code /> }} />
-          </p>
-        </article>
-        <article className="card">
-          <span className="card-kicker">{t("today.portabilityKicker")}</span>
-          <h2>{t("today.portabilityTitle")}</h2>
-          <p>
-            <Trans
-              i18nKey="today.portabilityBody"
-              components={{ code: <code /> }}
-            />
-          </p>
-        </article>
-        <article className="card">
-          <span className="card-kicker">{t("today.privacyKicker")}</span>
-          <h2>{t("today.privacyTitle")}</h2>
-          <p>{t("today.privacyBody")}</p>
-        </article>
-        <article className="card">
-          <span className="card-kicker">{t("today.continuityKicker")}</span>
-          <h2>{t("today.continuityTitle")}</h2>
-          <p>{t("today.continuityBody")}</p>
-        </article>
-      </section>
     </>
   );
 }
@@ -955,7 +925,6 @@ function App() {
             height={30}
           />
           <span className="brand-name">Study Planner</span>
-          <span className="local-chip">{t("app.localChip")}</span>
         </div>
         <div className="topbar-end">
           <div className="topbar-meta">

@@ -72,7 +72,6 @@ const es = {
     },
   },
   app: {
-    localChip: "Sin conexión",
     tagline: "Local · sin cuentas · sin telemetría",
   },
   today: {
@@ -94,23 +93,6 @@ const es = {
     firstTaskNotice:
       "Creá la primera tarea en la sección Tareas o desde el botón de arriba.",
     pendingAria: "Tareas pendientes",
-    principlesAria: "Principios del proyecto",
-    dataKicker: "Datos",
-    dataTitle: "Bóveda local",
-    dataBody:
-      "Datos vivos en <code>&lt;bóveda&gt;/omega</code> y snapshots futuros en <code>&lt;bóveda&gt;/longlife</code>.",
-    portabilityKicker: "Portabilidad",
-    portabilityTitle: "Exportación total",
-    portabilityBody:
-      "Un único <code>.txt</code> canónico, con checksum y round-trip byte a byte.",
-    privacyKicker: "Privacidad",
-    privacyTitle: "Sin red",
-    privacyBody:
-      "La webview no tiene permisos de archivos, SQL ni HTTP. El único módulo de red será el updater.",
-    continuityKicker: "Continuidad",
-    continuityTitle: "Reanudable",
-    continuityBody:
-      "Cada actualización está probada y documentada para que puedas seguir sin perder contexto.",
     reopen: "Reabrir",
     complete: "Completar",
     done: "Hecha",
@@ -302,6 +284,8 @@ const es = {
     noVaultBody:
       "Elegí una carpeta en Bóveda y volvé para cargar tu año académico.",
     loading: "Cargando estructura académica…",
+    sectionsAria: "Subsecciones de la estructura académica",
+    structureTab: "Años y términos",
     yearsTitle: "Años académicos",
     noYears: "Todavía no hay años cargados.",
     termsTitle: "Términos",
@@ -341,6 +325,38 @@ const es = {
     noExtra: "Sin datos adicionales",
     attendanceLabel: "Asistencia mínima:",
     noThreshold: "sin umbral",
+    studyTopicsTitle: "Temas de estudio",
+    studyTopicsCopy:
+      "Guardá los temas de cada materia y registrá cada repaso con su fecha. Los repasos alimentan el repaso espaciado (SM-2) que ya usa Fortalezas.",
+    studySubject: "Materia de los temas",
+    topicSubject: "Materia del tema",
+    allSubjects: "Todas las materias",
+    studyRangeAria: "Período programado de los temas",
+    studyRange: {
+      week: "Semana",
+      month: "Mes",
+      all: "Todo",
+    },
+    noStudyTopicsRange: "No hay temas programados en este período.",
+    nextExam: "Próximo examen",
+    showMoreTopics: "Mostrar más ({{shown}} de {{total}})",
+    studyTopicName: "Tema",
+    studyTopicNamePlaceholder: "Matrices y determinantes",
+    studyTopicDescription: "Descripción (opcional)",
+    addStudyTopic: "Agregar tema",
+    noStudyTopics: "Esta materia todavía no tiene temas guardados.",
+    chooseStudySubject: "Primero elegí una materia.",
+    studyTopicCreated: "Tema guardado.",
+    studyTopicDeleted: "Tema «{{name}}» eliminado.",
+    deleteStudyTopicAria: "Eliminar tema «{{name}}»",
+    lastReview: "Último repaso",
+    nextReview: "Próximo repaso",
+    neverReviewed: "sin repasos",
+    noReviewDate: "sin fecha",
+    reviewQuality: "Calidad del repaso",
+    reviewDate: "Fecha del repaso",
+    markReview: "Marcar repaso",
+    studyReviewRegistered: "Repaso registrado. Próximo repaso: {{date}}.",
     studyPlanTitle: "Plan de estudios",
     studyPlanCopy:
       "Todas las materias de tu carrera, agrupadas por ciclos. No son los semestres: agregalas acá y marcalas a medida que las aprobás.",
@@ -386,6 +402,7 @@ const es = {
   },
   schedule: {
     eyebrow: "Horario · semanas y rotaciones",
+    sectionsAria: "Subsecciones de gestión del horario",
     title: "Horario semanal",
     copyReady:
       "Rotaciones, feriados y excepciones se aplican sobre la semana. La asistencia se registra por clase y alimenta el umbral de cada materia.",
@@ -514,6 +531,7 @@ const es = {
   },
   exams: {
     eyebrow: "Exámenes · temas y pesos",
+    sectionsAria: "Subsecciones de exámenes",
     title: "Exámenes",
     copy: "Fechas, pesos, resultados y temas vinculados. Todo local y sin dependencias de red.",
     noVaultBody:
@@ -521,6 +539,10 @@ const es = {
     noSubjectsBody: "Los exámenes se asocian a una materia y un término.",
     listTitle: "Exámenes",
     noExams: "Todavía no hay exámenes.",
+    pageSize: "Exámenes por página",
+    showing: "Mostrando {{shown}} de {{total}}",
+    loadMore: "Cargar más",
+    loadingLinks: "Cargando temas vinculados…",
     weightSuffix: " · peso {{weight}} %",
     scoreSuffix: " · {{score}} / {{max}}",
     deleteExamAria: "Eliminar examen {{title}}",
@@ -550,6 +572,7 @@ const es = {
   },
   grades: {
     eyebrow: "Notas · punto fijo",
+    sectionsAria: "Subsecciones de notas",
     title: "Notas",
     copy: "Escalas, categorías y entradas con promedio ponderado y descarte del menor. Los cálculos usan enteros: centipuntos y basis points.",
     noVaultBody:

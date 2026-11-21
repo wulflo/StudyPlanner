@@ -1,9 +1,9 @@
 # Study Planner — Checklist persistente
 
-> **Última actualización:** 2026-11-16
+> **Última actualización:** 2026-11-21
 > **Fase actual:** 5 — Updater, notificaciones y empaquetado (cerrada; mantenimiento)
-> **Versión:** 0.2.2 · `schema_version = 4` · `export_format_version = 1`
-> **Checklist activa de remodelación de UI:** [`UI_REMODEL_CHECKLIST.md`](UI_REMODEL_CHECKLIST.md)
+> **Versión:** 0.2.3 · `schema_version = 4` · `export_format_version = 1`
+> **Checklists activas:** [`USER_REQUESTS_CHECKLIST.md`](USER_REQUESTS_CHECKLIST.md) · [`UX_REFINEMENT_CHECKLIST.md`](UX_REFINEMENT_CHECKLIST.md) · [`UI_REMODEL_CHECKLIST.md`](UI_REMODEL_CHECKLIST.md) (histórica)
 
 Este archivo es la fuente de verdad para retomar el proyecto después de días o semanas sin internet. Si algo no coincide con el código, gana el código y hay que corregir este documento en el mismo commit.
 
@@ -35,26 +35,26 @@ Este archivo es la fuente de verdad para retomar el proyecto después de días o
 |---|---|
 | Fase | 5 — Updater, notificaciones y empaquetado (cerrada; mantenimiento) |
 | Pendientes | Solo acciones `[futuro]`: opcionales, no bloquean desarrollo ni releases |
-| Versión de app | 0.2.2 |
+| Versión de app | 0.2.3 |
 | Esquema SQLite | v4 (migraciones `0002_partial_unique_indexes.sql`, `0003_default_locale_english.sql` y `0004_study_cycles.sql`; ver ADR-023) |
 | Formato de exportación | v1 implementado y verificado con round-trip byte a byte |
 | Frontend | React 19 + TypeScript + Vite 8 |
 | Backend | Rust + Tauri 2.12 + `rusqlite` 0.41 (bundled, backup) |
 | Red en la webview | Prohibida por CSP y permisos; el lanzador del repositorio y el updater viven en Rust |
-| Updater | Clave pública de producción configurada; detección de AppImage, `.deb`, `.rpm`, Windows y macOS; Snap y MSIX gestionados por sus tiendas; releases firmadas publicadas (`v0.1.0` a `v0.2.2`) |
+| Updater | Clave pública de producción configurada; detección de AppImage, `.deb`, `.rpm`, Windows y macOS; Snap y MSIX gestionados por sus tiendas; releases firmadas publicadas (`v0.1.0` a `v0.2.3`) |
 | Notificaciones | Locales, calculadas en el store y entregadas por D-Bus desde Rust; sin plugin ni permisos de webview; sonido opcional y modo segundo plano con bandeja |
 | Bóveda real | Selección local, lock, backups verificados, snapshots, exportación/importación canónica, restauración con backup previo y log local |
 | Secretos | Ninguno generado, ninguno en el repo |
 | Git | Repositorio local + remoto GitHub [`wulflo/StudyPlanner`](https://github.com/wulflo/StudyPlanner) (público); `main` con commit inicial `87f2be8` |
 | CI | GitHub Actions con los crates actuales (core, store, transfer, updater y host), auditoría de red y `release.yml` para tags `v*` |
-| Release | AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX) y macOS; `v0.2.2` agrega el rediseño de interfaz, el idioma inglés por defecto y el plan de estudios por ciclos (esquema v4) |
+| Release | AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX) y macOS; `v0.2.3` agrega pestañas accesibles, temas de estudio con repasos fechados y exámenes paginados sincronizados con Notas. `v0.2.2` incorporó el rediseño de interfaz, el idioma inglés por defecto y el plan de estudios por ciclos (esquema v4) |
 
 ### Verificación vigente
 
 ```text
 npm run check       ✅  66 tests de UI
 cargo test -p study-planner-core -p study-planner-store -p study-planner-transfer -p study-planner-updater
-                    ✅  141 tests (43 core, 63 store, 21 transfer, 14 updater)
+                    ✅  146 tests (43 core, 68 store, 21 transfer, 14 updater)
 cargo test -p study-planner                                 ✅  21 tests de bóveda y host
 cargo clippy (core/store/transfer/updater) -- -D warnings    ✅
 cargo clippy -p study-planner --all-targets -- -D warnings   ✅
@@ -549,5 +549,5 @@ Resumen; detalle en `docs/OFFLINE.md`.
 1. [x] Guardar la passphrase en el gestor de contraseñas y papel, y confirmar para borrar el archivo temporal (hecho el 2026-11-16).
 2. [futuro] Copiar `study-planner.key` y `.pub` a la copia offline (el backup `.gpg` remoto ya está subido).
 3. [futuro] Ejecutar el workflow de release en Linux, Windows y macOS; corregir lo que falle.
-4. [futuro] Publicar una release firmada (`v0.2.2` o superior) y probar el updater real.
+4. [futuro] Publicar una release firmada (`v0.2.3` o superior) y probar el updater real.
 5. [futuro] Probar el `.snap` en Ubuntu 24.04 limpio y, si se pide, publicar en `edge`.

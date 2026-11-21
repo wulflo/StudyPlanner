@@ -427,3 +427,103 @@ notificaciones liberadas no podían reclamarse de nuevo.
 - Las bases v1 migran automáticamente con backup previo y checksum verificado.
 - Los backups con esquema mayor a 2 se rechazan; los v1 se migran al abrirse, pero la
   restauración del backup principal exige que `verify_backup` lo acepte.
+
+---
+
+## ADR-024 — Checksum de migraciones tolerante entre dispositivos
+
+**Estado:** aceptada; implementada.
+
+**Contexto:** el texto de las migraciones embebidas puede cambiar entre compilaciones,
+equipos o sincronizaciones. Al abrir una bóveda creada o copiada en otro dispositivo, la
+comparación estricta del checksum registrado en `schema_migration` podía fallar aunque el
+esquema real fuera correcto, y la app obligaba a recrear la bóveda.
+
+**Decisión:**
+
+- `verify_applied_migrations` deja de devolver un error ante una diferencia de checksum.
+  Si la fila existe, se actualiza `name` y `checksum` con los valores de esta compilación;
+  si falta, se inserta. `applied_at` no se modifica.
+- La reparación es idempotente y ocurre antes de aplicar migraciones pendientes.
+- Se eliminan las variantes `StoreError::MissingMigration` y
+  `StoreError::MigrationChecksum`, que ya no representan un fallo.
+- La integridad real se mantiene con `PRAGMA integrity_check`, `PRAGMA foreign_key_check`
+  y `PRAGMA user_version`, que siguen siendo obligatorios antes de abrir la bóveda.
+
+**Consecuencias:**
+
+- Una bóveda sincronizada entre dispositivos se abre aunque el texto de una migración
+  haya cambiado; no hace falta recrearla.
+- El checksum queda como metadato informativo y de auditoría, no como puerta de entrada.
+- Los tests `repairs_a_tampered_migration_checksum` y
+  `restores_a_missing_migration_row` cubren la reparación.
+
+---
+
+## ADR-025 — Resultado del examen sincronizado con Notas
+
+**Estado:** aceptada; implementada.
+
+**Contexto:** el resultado de un examen se volvía a escribir a mano en Notas, lo que
+duplicaba trabajo y permitía que ambas vistas quedaran desactualizadas entre sí. Además,
+la lista de exámenes pedía los vínculos examen–tema de todos los exámenes (N+1) y no
+limitaba cuántos se mostraban.
+
+**Decisión:**
+
+- `create_exam` y `update_exam` mantienen una entrada de `grade_entry` vinculada por
+  `exam_id` cuando el examen tiene nota y máximo. El título, la fecha, la nota, el máximo
+  y el peso se copian del examen.
+- Si el examen deja de tener resultado, la entrada vinculada se borra lógicamente. Si el
+  resultado vuelve, se crea una entrada nueva.
+- Si la materia no tiene escala o categoría, se crea una escala por defecto (0–100,
+  aprueba con 60) y una categoría «Exámenes» al guardar el primer resultado. Si ya hay
+  categorías, se reutiliza la primera (preferentemente «Exámenes»).
+- `delete_exam` borra en cascada lógica sus entradas de nota derivadas. Los adjuntos del
+  examen siguen bloqueando el borrado.
+- La vista de exámenes pagina en cliente con tamaños `5`, `10`, `20` y `50`, ofrece
+  «Cargar más» y pide los vínculos examen–tema solo para los exámenes visibles.
+
+**Consecuencias:**
+
+- El resultado se registra una sola vez en Exámenes y aparece en Notas sin duplicar datos.
+- Editar o borrar el examen mantiene consistente el promedio de la materia.
+- Los tests `syncs_exam_results_with_a_linked_grade_entry`,
+  `reuses_an_existing_grade_category_for_exam_results` y
+  `deleting_an_exam_cascades_linked_grade_entries` cubren la sincronización.
+
+---
+
+## ADR-026 — Pestañas accesibles y carga acotada de temas de estudio
+
+**Estado:** aceptada; implementada.
+
+**Contexto:** varias vistas apilaban subsecciones largas en una sola columna, lo que
+obligaba a desplazarse mucho y cargaba de golpe todos los datos. En «Temas de estudio»
+cada tema consultaba por separado su autoevaluación, repaso y próximo examen (N+1), y
+los cambios de filtro podían dejar en pantalla una respuesta anterior.
+
+**Decisión:**
+
+- Un componente `Tabs` reutilizable expone `tablist`, `tab` y `tabpanel` con
+  `aria-selected`, `aria-controls`, navegación por flechas/Home/End y foco persistente.
+  Solo se monta el panel activo: el contenido inactivo no queda en el DOM.
+- Se aplica en Materias, Horario, Notas y Exámenes. La semana del horario y la
+  selección de materia se mantienen fuera de las pestañas para no perder el contexto.
+- `.button` pasa a `7px 14px` / `0.9rem` y `.week-nav .button` a `5px 10px` /
+  `0.8rem`, con la regla declarada antes de las de mayor especificidad para respetar
+  la cascada.
+- `list_topic_studies_in_range` filtra por materia y por un rango inclusivo `from`/`to`
+  (fecha de repaso o de examen) en una sola consulta, y carga valoraciones, overrides,
+  repasos y exámenes por lote en `HashMap`s. Los parámetros opcionales llegan desde la
+  vista por IPC (`listTopicStudies` → `list_topic_studies`).
+- La vista acota la lista con «Mostrar más» y usa un contador de solicitudes para
+  descartar respuestas viejas; mientras carga muestra un estado `role="status"` sin
+  bloquear la interfaz.
+
+**Consecuencias:**
+
+- Cada subsección queda a un clic y el DOM solo contiene el panel visible.
+- Cambiar de materia o período no congela la app ni mezcla resultados de filtros.
+- Las claves `schedule.sectionsAria`, `grades.sectionsAria` y `exams.sectionsAria`
+  completan los textos bilingües de las barras de pestañas.

@@ -5,6 +5,8 @@
 //! puras de `study-planner-core` para que la UI y los tests compartan la misma
 //! semántica.
 
+use std::collections::HashMap;
+
 use rusqlite::types::Value;
 use rusqlite::{OptionalExtension, Row, params, params_from_iter};
 use serde::Serialize;
@@ -603,12 +605,59 @@ impl Store {
         subject_id: Option<&str>,
         today: &str,
     ) -> Result<Vec<TopicStudy>, StoreError> {
+        self.list_topic_studies_in_range(subject_id, today, None, None)
+    }
+
+    /// Lista temas filtrados por materia y por período programado.
+    ///
+    /// `from` y `to` son fechas `YYYY-MM-DD` inclusivas. Un tema entra en el
+    /// rango si tiene un repaso o un examen programado dentro de él. Las
+    /// autoevaluaciones, overrides, repasos y exámenes se cargan por lote para
+    /// evitar una consulta por tema (N+1) cuando hay muchos temas.
+    pub fn list_topic_studies_in_range(
+        &self,
+        subject_id: Option<&str>,
+        today: &str,
+        from: Option<&str>,
+        to: Option<&str>,
+    ) -> Result<Vec<TopicStudy>, StoreError> {
         let today = normalize_date(today).map_err(StoreError::InvalidStudy)?;
+        let range = match (from, to) {
+            (Some(from), Some(to)) => Some((
+                normalize_date(from).map_err(StoreError::InvalidStudy)?,
+                normalize_date(to).map_err(StoreError::InvalidStudy)?,
+            )),
+            _ => None,
+        };
+
         let mut sql = format!("SELECT {TOPIC_COLUMNS} FROM topic WHERE deleted_at IS NULL");
         let mut values: Vec<Value> = Vec::new();
         if let Some(subject_id) = subject_id {
             sql.push_str(" AND subject_id = ?");
             values.push(Value::Text(subject_id.to_string()));
+        }
+        if let Some((from, to)) = &range {
+            sql.push_str(
+                " AND (
+                    EXISTS (
+                        SELECT 1 FROM review_item r
+                        WHERE r.topic_id = topic.id AND r.deleted_at IS NULL
+                          AND r.due_date IS NOT NULL
+                          AND r.due_date >= ? AND r.due_date <= ?
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM exam_topic et
+                        JOIN exam e ON e.id = et.exam_id
+                        WHERE et.topic_id = topic.id AND et.deleted_at IS NULL
+                          AND e.deleted_at IS NULL
+                          AND e.date >= ? AND e.date <= ?
+                    )
+                )",
+            );
+            values.push(Value::Text(from.clone()));
+            values.push(Value::Text(to.clone()));
+            values.push(Value::Text(from.clone()));
+            values.push(Value::Text(to.clone()));
         }
         sql.push_str(" ORDER BY subject_id, sort_order, name, id");
 
@@ -620,21 +669,22 @@ impl Store {
         }
 
         let (weak_bp, strong_bp) = self.study_thresholds()?;
+        let latest_assessments = self.latest_assessments_by_topic(subject_id)?;
+        let overrides = self.strength_overrides_by_topic(subject_id)?;
+        let review_items = self.review_items_by_topic(subject_id)?;
+        let next_exams = self.next_exam_dates_by_topic(&today, subject_id)?;
+
         let mut studies = Vec::with_capacity(topics.len());
         for topic in topics {
-            let assessments = self.list_self_assessments(&topic.id)?;
-            let latest = assessments.into_iter().next();
+            let latest = latest_assessments.get(&topic.id).cloned();
             let derived = classification_from_score(
                 latest.as_ref().map(|item| item.score),
                 weak_bp,
                 strong_bp,
             );
-            let override_item = self.get_strength_override(&topic.id)?;
-            let classification = effective_classification(
-                derived,
-                override_item.as_ref().map(|item| item.classification),
-            );
-            let next_exam_date = self.next_exam_date(&topic.id, &today)?;
+            let override_item = overrides.get(&topic.id);
+            let classification =
+                effective_classification(derived, override_item.map(|item| item.classification));
 
             studies.push(TopicStudy {
                 topic_id: topic.id.clone(),
@@ -645,14 +695,113 @@ impl Store {
                 sort_order: topic.sort_order,
                 latest_assessment: latest,
                 derived_classification: derived,
-                override_classification: override_item.as_ref().map(|item| item.classification),
+                override_classification: override_item.map(|item| item.classification),
                 classification,
-                override_reason: override_item.and_then(|item| item.reason),
-                review_item: self.get_review_item(&topic.id)?,
-                next_exam_date,
+                override_reason: override_item.and_then(|item| item.reason.clone()),
+                review_item: review_items.get(&topic.id).cloned(),
+                next_exam_date: next_exams.get(&topic.id).cloned(),
             });
         }
         Ok(studies)
+    }
+
+    fn latest_assessments_by_topic(
+        &self,
+        subject_id: Option<&str>,
+    ) -> Result<HashMap<String, SelfAssessment>, StoreError> {
+        let mut sql = format!(
+            "SELECT {ASSESSMENT_COLUMNS} FROM self_assessment
+             WHERE deleted_at IS NULL
+               AND topic_id IN (SELECT id FROM topic WHERE deleted_at IS NULL"
+        );
+        let mut values: Vec<Value> = Vec::new();
+        if let Some(subject_id) = subject_id {
+            sql.push_str(" AND subject_id = ?");
+            values.push(Value::Text(subject_id.to_string()));
+        }
+        sql.push_str(") ORDER BY topic_id, assessed_at DESC, created_at DESC, id DESC");
+
+        let mut statement = self.connection().prepare(&sql)?;
+        let rows = statement.query_map(params_from_iter(values), assessment_from_row)?;
+        let mut latest = HashMap::new();
+        for row in rows {
+            let item = row?;
+            latest.entry(item.topic_id.clone()).or_insert(item);
+        }
+        Ok(latest)
+    }
+
+    fn strength_overrides_by_topic(
+        &self,
+        subject_id: Option<&str>,
+    ) -> Result<HashMap<String, StrengthOverride>, StoreError> {
+        let mut sql = format!(
+            "SELECT {OVERRIDE_COLUMNS} FROM strength_override
+             WHERE deleted_at IS NULL
+               AND topic_id IN (SELECT id FROM topic WHERE deleted_at IS NULL"
+        );
+        let mut values: Vec<Value> = Vec::new();
+        if let Some(subject_id) = subject_id {
+            sql.push_str(" AND subject_id = ?");
+            values.push(Value::Text(subject_id.to_string()));
+        }
+        sql.push_str(") ORDER BY topic_id");
+
+        let mut statement = self.connection().prepare(&sql)?;
+        let rows = statement.query_map(params_from_iter(values), override_from_row)?;
+        let mut overrides = HashMap::new();
+        for row in rows {
+            let item = row?;
+            overrides.insert(item.topic_id.clone(), item);
+        }
+        Ok(overrides)
+    }
+
+    fn review_items_by_topic(
+        &self,
+        subject_id: Option<&str>,
+    ) -> Result<HashMap<String, ReviewItem>, StoreError> {
+        Ok(self
+            .list_review_items(subject_id)?
+            .into_iter()
+            .map(|item| (item.topic_id.clone(), item))
+            .collect())
+    }
+
+    fn next_exam_dates_by_topic(
+        &self,
+        today: &str,
+        subject_id: Option<&str>,
+    ) -> Result<HashMap<String, String>, StoreError> {
+        let mut sql = String::from(
+            "SELECT exam_topic.topic_id, min(exam.date)
+             FROM exam_topic
+             JOIN exam ON exam.id = exam_topic.exam_id
+             WHERE exam_topic.deleted_at IS NULL
+               AND exam.deleted_at IS NULL
+               AND exam.date >= ?
+               AND exam_topic.topic_id IN (
+                   SELECT id FROM topic WHERE deleted_at IS NULL",
+        );
+        let mut values: Vec<Value> = vec![Value::Text(today.to_string())];
+        if let Some(subject_id) = subject_id {
+            sql.push_str(" AND subject_id = ?");
+            values.push(Value::Text(subject_id.to_string()));
+        }
+        sql.push_str(") GROUP BY exam_topic.topic_id");
+
+        let mut statement = self.connection().prepare(&sql)?;
+        let rows = statement.query_map(params_from_iter(values), |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?))
+        })?;
+        let mut dates = HashMap::new();
+        for row in rows {
+            let (topic_id, date) = row?;
+            if let Some(date) = date {
+                dates.insert(topic_id, date);
+            }
+        }
+        Ok(dates)
     }
 
     /// Calcula la cola de prioridad explicable para hoy.
@@ -822,24 +971,6 @@ impl Store {
         self.connection()
             .query_row(&sql, params![id], session_from_row)
             .optional()
-            .map_err(StoreError::from)
-    }
-
-    fn next_exam_date(&self, topic_id: &str, today: &str) -> Result<Option<String>, StoreError> {
-        self.connection()
-            .query_row(
-                "SELECT min(exam.date)
-                 FROM exam
-                 JOIN exam_topic ON exam_topic.exam_id = exam.id
-                 WHERE exam_topic.topic_id = ?1
-                   AND exam_topic.deleted_at IS NULL
-                   AND exam.deleted_at IS NULL
-                   AND exam.date >= ?2",
-                params![topic_id, today],
-                |row| row.get(0),
-            )
-            .optional()
-            .map(|value| value.flatten())
             .map_err(StoreError::from)
     }
 

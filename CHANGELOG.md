@@ -2,6 +2,27 @@
 
 Todos los cambios relevantes de Study Planner se registran acá. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado pretende seguir [SemVer](https://semver.org/lang/es/).
 
+## [0.2.3] — 2026-11-21 — Refinamiento de interfaz y bóveda entre dispositivos
+
+### Agregado
+
+- Pestañas horizontales accesibles en Materias, Horario, Notas y Exámenes para dividir subsecciones largas, con un componente `Tabs` reutilizable con foco y panel activo.
+- **Temas de estudio** dentro de Materias: alta y baja de temas, fecha del último repaso, próximo repaso y «Marcar repaso» sobre el SM-2 existente. Filtro por materia (incluida «Todas») y período (semana/mes/todo), lista acotada con «Mostrar más» y carga por lotes para evitar consultas N+1 (ADR-026).
+- Exámenes: paginación en cliente (`5`/`10`/`20`/`50`) con «Cargar más» y vínculos examen–tema pedidos solo para los exámenes visibles.
+- Sincronización automática del resultado de un examen con una entrada de nota vinculada (`grade_entry.exam_id`): si el examen no tiene resultado la entrada se oculta, al borrarlo se elimina en cascada, y se crean una escala y una categoría «Exámenes» por defecto cuando la materia no las tiene (ADR-025).
+
+### Cambiado
+
+- Botones más compactos en toda la app, con variante para la navegación semanal y de mes; las filas de acciones pasan a disponerse en horizontal y solo envuelven cuando no hay ancho.
+- `list_topic_studies_in_range` filtra por materia y rango de fechas en el store; el comando Tauri y el cliente IPC exponen `from` y `to` opcionales.
+- La app y el snap comparten la versión `0.2.3` y el pipeline de release publica AppImage, `.deb`, `.rpm`, NSIS, MSI, DMG y snap.
+
+### Corregido
+
+- El checksum de una migración ya aplicada se repara en vez de bloquear la bóveda al abrirla en otro equipo; la integridad real sigue verificándose con `PRAGMA integrity_check`, `foreign_key_check` y `PRAGMA user_version` (ADR-024).
+- Se eliminaron las tarjetas de desarrollo «Datos», «Portabilidad», «Privacidad» y «Continuidad» de «Diario > Hoy» y el indicador «Sin conexión» de la barra superior.
+- El filtro de temas de estudio descarta respuestas obsoletas para evitar carreras sin bloquear la interfaz, y usa un `<fieldset>` accesible para el selector de período.
+
 ## [0.2.2] — 2026-11-21 — Rediseño de interfaz y plan de estudios
 
 ### Agregado

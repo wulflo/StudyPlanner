@@ -7,7 +7,7 @@ Horarios, materias, exámenes, notas, tareas, apuntes y repaso espaciado en una 
 [English](README.md) · **Español**
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licencia)
-[![Status: v0.2.2](https://img.shields.io/badge/status-v0.2.2-brightgreen.svg)](CHANGELOG.md)
+[![Status: v0.2.3](https://img.shields.io/badge/status-v0.2.3-brightgreen.svg)](CHANGELOG.md)
 [![Tauri 2.12](https://img.shields.io/badge/Tauri-2.12-24C8D8?logo=tauri&logoColor=white)](https://tauri.app)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![Platforms: Linux | Windows | macOS](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)](#requisitos)
@@ -18,7 +18,7 @@ Horarios, materias, exámenes, notas, tareas, apuntes y repaso espaciado en una 
 
 ## Estado del proyecto
 
-> **Las fases 0 a 5 están completas y publicadas.** `v0.2.2` se distribuye como AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX) y macOS, con un actualizador firmado multiplataforma, notificaciones locales y empaquetado MSIX para Microsoft Store. Esta versión reconstruye la interfaz sobre tokens Material 3, deja el inglés como idioma predeterminado con español disponible, agrega selectores desplegables y campos de fecha accesibles, barra lateral colapsable y un plan de estudios por ciclos con materias aprobadas (esquema de bóveda v4). El snap `study-planner` se publica desde el mismo pipeline de release.
+> **Las fases 0 a 5 están completas y publicadas.** `v0.2.3` se distribuye como AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX) y macOS, con un actualizador firmado multiplataforma, notificaciones locales y empaquetado MSIX para Microsoft Store. Esta versión agrega pestañas accesibles en Materias, Horario, Notas y Exámenes, temas de estudio con repasos SM-2 fechados y filtros por materia y período, exámenes paginados sincronizados con las notas, botones más compactos y un checksum de migración que se repara solo al abrir una bóveda en otro dispositivo. El snap `study-planner` se publica desde el mismo pipeline de release.
 >
 > La app incluye temas claro, oscuro y del sistema, colores de acento, modo de segundo plano en la bandeja y recordatorios con sonido opcional.
 

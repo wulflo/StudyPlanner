@@ -88,29 +88,33 @@ impl Store {
         let values = validate_exam_input(input)?;
 
         let id = new_id();
-        self.connection().execute(
-            "INSERT INTO exam
-               (id, subject_id, term_id, title, date, start_time, end_time, room,
-                weight_bp, result_score_cp, result_max_cp, result_status, notes)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
-            params![
-                id,
-                subject_id,
-                term_id,
-                values.title,
-                values.date,
-                values.start_time,
-                values.end_time,
-                values.room,
-                values.weight_bp,
-                values.result_score_cp,
-                values.result_max_cp,
-                values.result_status,
-                values.notes,
-            ],
-        )?;
+        self.with_transaction(|| {
+            self.connection().execute(
+                "INSERT INTO exam
+                   (id, subject_id, term_id, title, date, start_time, end_time, room,
+                    weight_bp, result_score_cp, result_max_cp, result_status, notes)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+                params![
+                    id,
+                    subject_id,
+                    term_id,
+                    values.title,
+                    values.date,
+                    values.start_time,
+                    values.end_time,
+                    values.room,
+                    values.weight_bp,
+                    values.result_score_cp,
+                    values.result_max_cp,
+                    values.result_status,
+                    values.notes,
+                ],
+            )?;
 
-        self.get_exam(&id)?.ok_or(StoreError::ExamNotFound)
+            let exam = self.get_exam(&id)?.ok_or(StoreError::ExamNotFound)?;
+            self.sync_exam_grade_entry(&exam)?;
+            Ok(exam)
+        })
     }
 
     /// Actualiza un examen vivo.
@@ -121,42 +125,42 @@ impl Store {
         self.ensure_subject_belongs_to_term(&current.subject_id, &current.term_id)?;
         let values = validate_exam_input(input)?;
 
-        let changed = self.connection().execute(
-            "UPDATE exam
-             SET title = ?1, date = ?2, start_time = ?3, end_time = ?4, room = ?5,
-                 weight_bp = ?6, result_score_cp = ?7, result_max_cp = ?8,
-                 result_status = ?9, notes = ?10,
-                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-             WHERE id = ?11 AND deleted_at IS NULL",
-            params![
-                values.title,
-                values.date,
-                values.start_time,
-                values.end_time,
-                values.room,
-                values.weight_bp,
-                values.result_score_cp,
-                values.result_max_cp,
-                values.result_status,
-                values.notes,
-                id,
-            ],
-        )?;
+        self.with_transaction(|| {
+            let changed = self.connection().execute(
+                "UPDATE exam
+                 SET title = ?1, date = ?2, start_time = ?3, end_time = ?4, room = ?5,
+                     weight_bp = ?6, result_score_cp = ?7, result_max_cp = ?8,
+                     result_status = ?9, notes = ?10,
+                     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                 WHERE id = ?11 AND deleted_at IS NULL",
+                params![
+                    values.title,
+                    values.date,
+                    values.start_time,
+                    values.end_time,
+                    values.room,
+                    values.weight_bp,
+                    values.result_score_cp,
+                    values.result_max_cp,
+                    values.result_status,
+                    values.notes,
+                    id,
+                ],
+            )?;
 
-        if changed == 0 {
-            return Err(StoreError::ExamNotFound);
-        }
-        self.get_exam(id)?.ok_or(StoreError::ExamNotFound)
+            if changed == 0 {
+                return Err(StoreError::ExamNotFound);
+            }
+            let exam = self.get_exam(id)?.ok_or(StoreError::ExamNotFound)?;
+            self.sync_exam_grade_entry(&exam)?;
+            Ok(exam)
+        })
     }
 
-    /// Borra lógicamente un examen y sus vínculos con temas.
+    /// Borra lógicamente un examen, sus vínculos con temas y las notas que
+    /// genera su resultado.
     pub fn delete_exam(&self, id: &str) -> Result<(), StoreError> {
         self.with_transaction(|| {
-            self.ensure_no_live_rows(
-                "SELECT count(*) FROM grade_entry WHERE exam_id = ?1 AND deleted_at IS NULL",
-                id,
-                "El examen todavía tiene notas asociadas; borralas primero.",
-            )?;
             self.ensure_no_live_rows(
                 "SELECT count(*) FROM attachment
                  WHERE owner_type = 'exam' AND owner_id = ?1 AND deleted_at IS NULL",
@@ -177,6 +181,16 @@ impl Store {
 
             self.connection().execute(
                 "UPDATE exam_topic
+                 SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                 WHERE exam_id = ?1 AND deleted_at IS NULL",
+                params![id],
+            )?;
+
+            // La entrada de nota derivada del resultado no tiene sentido sin el
+            // examen: se borra lógicamente en la misma transacción.
+            self.connection().execute(
+                "UPDATE grade_entry
                  SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
                      updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
                  WHERE exam_id = ?1 AND deleted_at IS NULL",
@@ -433,6 +447,132 @@ impl Store {
             return Err(StoreError::ExamTopicNotFound);
         }
         Ok(())
+    }
+
+    /// Mantiene alineada la entrada de nota derivada del resultado del examen.
+    ///
+    /// Si el examen tiene nota y máximo, se crea o actualiza una entrada con
+    /// `exam_id`; si deja de tener resultado, la entrada se borra lógicamente.
+    /// La categoría y la escala por defecto se crean solo cuando hacen falta.
+    fn sync_exam_grade_entry(&self, exam: &Exam) -> Result<(), StoreError> {
+        let existing: Option<String> = self
+            .connection()
+            .query_row(
+                "SELECT id FROM grade_entry
+                 WHERE exam_id = ?1 AND deleted_at IS NULL
+                 LIMIT 1",
+                params![exam.id],
+                |row| row.get(0),
+            )
+            .optional()?;
+
+        let (Some(score_cp), Some(max_cp)) = (exam.result_score_cp, exam.result_max_cp) else {
+            if let Some(entry_id) = existing {
+                self.connection().execute(
+                    "UPDATE grade_entry
+                     SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                     WHERE id = ?1 AND deleted_at IS NULL",
+                    params![entry_id],
+                )?;
+            }
+            return Ok(());
+        };
+
+        let category_id = self.ensure_exam_grade_category(&exam.subject_id)?;
+        if let Some(entry_id) = existing {
+            self.connection().execute(
+                "UPDATE grade_entry
+                 SET category_id = ?1, title = ?2, score_cp = ?3, max_cp = ?4,
+                     weight_bp = ?5, date = ?6,
+                     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+                 WHERE id = ?7 AND deleted_at IS NULL",
+                params![
+                    category_id,
+                    exam.title,
+                    score_cp,
+                    max_cp,
+                    exam.weight_bp,
+                    exam.date,
+                    entry_id,
+                ],
+            )?;
+        } else {
+            let entry_id = new_id();
+            self.connection().execute(
+                "INSERT INTO grade_entry
+                   (id, subject_id, category_id, exam_id, title, score_cp, max_cp, weight_bp, date)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    entry_id,
+                    exam.subject_id,
+                    category_id,
+                    exam.id,
+                    exam.title,
+                    score_cp,
+                    max_cp,
+                    exam.weight_bp,
+                    exam.date,
+                ],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Devuelve una categoría viva de la materia para las notas de exámenes.
+    /// Si no hay escala ni categoría, crea las mínimas necesarias.
+    fn ensure_exam_grade_category(&self, subject_id: &str) -> Result<String, StoreError> {
+        let scale_id: Option<String> = self
+            .connection()
+            .query_row(
+                "SELECT id FROM grade_scale
+                 WHERE deleted_at IS NULL AND (subject_id = ?1 OR subject_id IS NULL)
+                 ORDER BY CASE WHEN subject_id = ?1 THEN 0 ELSE 1 END,
+                          is_default DESC,
+                          created_at
+                 LIMIT 1",
+                params![subject_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+
+        let scale_id = match scale_id {
+            Some(id) => id,
+            None => {
+                let id = new_id();
+                self.connection().execute(
+                    "INSERT INTO grade_scale
+                       (id, subject_id, name, min_cp, max_cp, pass_cp, precision, is_default)
+                     VALUES (?1, ?2, ?3, 0, 10000, 6000, 2, 1)",
+                    params![id, subject_id, "Escala por defecto"],
+                )?;
+                id
+            }
+        };
+
+        let category_id: Option<String> = self
+            .connection()
+            .query_row(
+                "SELECT id FROM grade_category
+                 WHERE subject_id = ?1 AND deleted_at IS NULL
+                 ORDER BY CASE WHEN name = 'Exámenes' THEN 0 ELSE 1 END, created_at
+                 LIMIT 1",
+                params![subject_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if let Some(id) = category_id {
+            return Ok(id);
+        }
+
+        let id = new_id();
+        self.connection().execute(
+            "INSERT INTO grade_category
+               (id, subject_id, scale_id, name, weight_bp, drop_lowest)
+             VALUES (?1, ?2, ?3, ?4, 10000, 0)",
+            params![id, subject_id, scale_id, "Exámenes"],
+        )?;
+        Ok(id)
     }
 
     fn get_exam(&self, id: &str) -> Result<Option<Exam>, StoreError> {
@@ -881,7 +1021,7 @@ mod tests {
     }
 
     #[test]
-    fn deleting_an_exam_requires_no_live_grade_entries() {
+    fn deleting_an_exam_cascades_linked_grade_entries() {
         let (store, subject_id, term_id) = migrated_store_with_subject();
         let exam = store
             .create_exam(&subject_id, &term_id, &exam_input("Parcial", "2026-05-10"))
@@ -923,12 +1063,120 @@ mod tests {
             )
             .unwrap();
 
-        assert!(matches!(
-            store.delete_exam(&exam.id).unwrap_err(),
-            StoreError::Conflict(_)
-        ));
-        store.delete_grade_entry(&entry.id).unwrap();
+        assert_eq!(entry.exam_id.as_deref(), Some(exam.id.as_str()));
         store.delete_exam(&exam.id).unwrap();
+        assert!(store.list_exams(None, None).unwrap().is_empty());
+        assert!(store.list_grade_entries(&subject_id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn syncs_exam_results_with_a_linked_grade_entry() {
+        let (store, subject_id, term_id) = migrated_store_with_subject();
+        let exam = store
+            .create_exam(
+                &subject_id,
+                &term_id,
+                &ExamInput {
+                    weight_bp: Some(5_000),
+                    result_score_cp: Some(8_000),
+                    result_max_cp: Some(10_000),
+                    result_status: Some("passed".to_string()),
+                    ..exam_input("Parcial", "2026-05-10")
+                },
+            )
+            .unwrap();
+
+        let entries = store.list_grade_entries(&subject_id).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].exam_id.as_deref(), Some(exam.id.as_str()));
+        assert_eq!(entries[0].title, "Parcial");
+        assert_eq!(entries[0].score_cp, 8_000);
+        assert_eq!(entries[0].max_cp, 10_000);
+        assert_eq!(entries[0].weight_bp, Some(5_000));
+        assert_eq!(entries[0].date.as_deref(), Some("2026-05-10"));
+
+        let scales = store.list_grade_scales(Some(&subject_id)).unwrap();
+        assert_eq!(scales.len(), 1);
+        assert!(scales[0].is_default);
+        let categories = store.list_grade_categories(&subject_id).unwrap();
+        assert_eq!(categories.len(), 1);
+        assert_eq!(categories[0].name, "Exámenes");
+        assert_eq!(categories[0].weight_bp, 10_000);
+
+        let entry_id = entries[0].id.clone();
+        store
+            .update_exam(
+                &exam.id,
+                &ExamInput {
+                    weight_bp: Some(5_000),
+                    result_score_cp: Some(9_000),
+                    result_max_cp: Some(10_000),
+                    result_status: Some("passed".to_string()),
+                    ..exam_input("Parcial corregido", "2026-05-11")
+                },
+            )
+            .unwrap();
+
+        let entries = store.list_grade_entries(&subject_id).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, entry_id);
+        assert_eq!(entries[0].title, "Parcial corregido");
+        assert_eq!(entries[0].score_cp, 9_000);
+        assert_eq!(entries[0].date.as_deref(), Some("2026-05-11"));
+        // La escala y la categoría se reutilizan, no se duplican.
+        assert_eq!(store.list_grade_scales(Some(&subject_id)).unwrap().len(), 1);
+        assert_eq!(store.list_grade_categories(&subject_id).unwrap().len(), 1);
+
+        store
+            .update_exam(&exam.id, &exam_input("Parcial corregido", "2026-05-11"))
+            .unwrap();
+        assert!(store.list_grade_entries(&subject_id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn reuses_an_existing_grade_category_for_exam_results() {
+        let (store, subject_id, term_id) = migrated_store_with_subject();
+        let scale = store
+            .create_grade_scale(&crate::GradeScaleInput {
+                subject_id: Some(subject_id.clone()),
+                name: "Escala".to_string(),
+                min_cp: 0,
+                max_cp: 10_000,
+                pass_cp: 6_000,
+                precision: 2,
+                is_default: true,
+            })
+            .unwrap();
+        let category = store
+            .create_grade_category(
+                &subject_id,
+                &crate::GradeCategoryInput {
+                    scale_id: scale.id.clone(),
+                    name: "Parciales".to_string(),
+                    weight_bp: 10_000,
+                    drop_lowest: 0,
+                },
+            )
+            .unwrap();
+
+        store
+            .create_exam(
+                &subject_id,
+                &term_id,
+                &ExamInput {
+                    result_score_cp: Some(7_000),
+                    result_max_cp: Some(10_000),
+                    result_status: Some("passed".to_string()),
+                    ..exam_input("Parcial", "2026-05-10")
+                },
+            )
+            .unwrap();
+
+        let entries = store.list_grade_entries(&subject_id).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].category_id, category.id);
+        assert_eq!(store.list_grade_scales(Some(&subject_id)).unwrap().len(), 1);
+        assert_eq!(store.list_grade_categories(&subject_id).unwrap().len(), 1);
     }
 
     #[test]

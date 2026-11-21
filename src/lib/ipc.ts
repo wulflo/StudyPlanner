@@ -1389,8 +1389,15 @@ export async function deleteStudySession(id: string): Promise<void> {
 export async function listTopicStudies(
   subjectId: string | null,
   today: string,
+  from: string | null = null,
+  to: string | null = null,
 ): Promise<TopicStudy[]> {
-  return invoke<TopicStudy[]>("list_topic_studies", { subjectId, today });
+  return invoke<TopicStudy[]>("list_topic_studies", {
+    subjectId,
+    today,
+    from,
+    to,
+  });
 }
 
 export async function listStudyPriorities(

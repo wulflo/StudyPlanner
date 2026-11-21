@@ -10,6 +10,7 @@ import {
 import { AttendanceButtons } from "../components/AttendanceButtons";
 import { CustomSelect } from "../components/CustomSelect";
 import { DateField } from "../components/DateField";
+import { Tabs } from "../components/Tabs";
 import { safeColor } from "../lib/color";
 import { getDateFnsLocale, useTranslation } from "../lib/i18n";
 import {
@@ -772,547 +773,598 @@ export function ScheduleView({
             </section>
           </div>
 
-          <div className="schedule-grid">
-            <section className="academic-panel" aria-labelledby="slots-title">
-              <div className="task-board-head">
-                <h2 id="slots-title">{t("schedule.slots")}</h2>
-                <span className="count-chip">{slots.length}</span>
-              </div>
-              {slots.length === 0 ? (
-                <p className="empty-state">{t("schedule.noSlots")}</p>
-              ) : (
-                <ul className="mini-list">
-                  {slots.map((slot) => (
-                    <li key={slot.id}>
-                      <span className="mini-item">
-                        <span>{slotLabel(slot.id)}</span>
-                        <span className="quiet">
-                          {slot.recurrence === "biweekly"
-                            ? t("schedule.biweekly")
-                            : t("schedule.weekly")}
-                          {slot.rotationKey
-                            ? t("schedule.rotationSuffix", {
-                                key: slot.rotationKey,
-                              })
-                            : ""}
-                          {slot.validFrom
-                            ? t("schedule.fromSuffix", { date: slot.validFrom })
-                            : ""}
-                          {slot.validTo
-                            ? t("schedule.untilSuffix", { date: slot.validTo })
-                            : ""}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        className="mini-action"
-                        onClick={() =>
-                          setSlotForm({
-                            id: slot.id,
-                            subjectId: slot.subjectId,
-                            weekday: slot.weekday,
-                            startTime: slot.startTime,
-                            endTime: slot.endTime,
-                            recurrence: slot.recurrence,
-                            rotationKey: slot.rotationKey ?? "",
-                            validFrom: slot.validFrom ?? "",
-                            validTo: slot.validTo ?? "",
-                            roomOverride: slot.roomOverride ?? "",
-                          })
-                        }
-                      >
-                        {t("common.edit")}
-                      </button>
-                      <button
-                        type="button"
-                        className="mini-action danger"
-                        onClick={() => void removeSlot(slot)}
-                        disabled={busy}
-                        aria-label={t("schedule.deleteSlotAria", {
-                          label: slotLabel(slot.id),
-                        })}
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <form className="inline-form" onSubmit={submitSlot}>
-                <div className="field">
-                  <span>{t("common.subject")}</span>
-                  <CustomSelect
-                    ariaLabel={t("common.subject")}
-                    className="select-field"
-                    value={slotForm.subjectId}
-                    onChange={(value) =>
-                      setSlotForm({ ...slotForm, subjectId: value })
-                    }
-                    disabled={slotForm.id !== null}
-                    required
-                    options={[
-                      { value: "", label: t("common.choose") },
-                      ...subjects.map((subject) => ({
-                        value: subject.id,
-                        label: subject.name,
-                      })),
-                    ]}
-                  />
-                </div>
-                <div className="field">
-                  <span>{t("schedule.day")}</span>
-                  <CustomSelect
-                    ariaLabel={t("schedule.day")}
-                    className="select-field"
-                    value={String(slotForm.weekday)}
-                    onChange={(value) =>
-                      setSlotForm({ ...slotForm, weekday: Number(value) })
-                    }
-                    options={weekdayLabels.map((label, index) => ({
-                      value: String(index + 1),
-                      label,
-                    }))}
-                  />
-                </div>
-                <label className="field narrow">
-                  <span>{t("common.start")}</span>
-                  <input
-                    className="text-field"
-                    type="time"
-                    value={slotForm.startTime}
-                    onChange={(event) =>
-                      setSlotForm({
-                        ...slotForm,
-                        startTime: event.target.value,
-                      })
-                    }
-                    required
-                  />
-                </label>
-                <label className="field narrow">
-                  <span>{t("common.end")}</span>
-                  <input
-                    className="text-field"
-                    type="time"
-                    value={slotForm.endTime}
-                    onChange={(event) =>
-                      setSlotForm({ ...slotForm, endTime: event.target.value })
-                    }
-                    required
-                  />
-                </label>
-                <div className="field">
-                  <span>{t("schedule.recurrence")}</span>
-                  <CustomSelect
-                    ariaLabel={t("schedule.recurrence")}
-                    className="select-field"
-                    value={slotForm.recurrence}
-                    onChange={(value) =>
-                      setSlotForm({
-                        ...slotForm,
-                        recurrence: value as Recurrence,
-                      })
-                    }
-                    options={[
-                      { value: "weekly", label: t("schedule.weekly") },
-                      { value: "biweekly", label: t("schedule.biweekly") },
-                    ]}
-                  />
-                </div>
-                <label className="field narrow">
-                  <span>{t("schedule.rotation")}</span>
-                  <input
-                    className="text-field"
-                    value={slotForm.rotationKey}
-                    onChange={(event) =>
-                      setSlotForm({
-                        ...slotForm,
-                        rotationKey: event.target.value,
-                      })
-                    }
-                    maxLength={40}
-                    placeholder="A"
-                  />
-                </label>
-                <DateField
-                  label={t("schedule.validFrom")}
-                  fieldClassName="field narrow"
-                  value={slotForm.validFrom}
-                  onChange={(validFrom) =>
-                    setSlotForm({ ...slotForm, validFrom })
-                  }
-                />
-                <DateField
-                  label={t("schedule.validTo")}
-                  fieldClassName="field narrow"
-                  value={slotForm.validTo}
-                  onChange={(validTo) => setSlotForm({ ...slotForm, validTo })}
-                />
-                <label className="field">
-                  <span>{t("common.room")}</span>
-                  <input
-                    className="text-field"
-                    value={slotForm.roomOverride}
-                    onChange={(event) =>
-                      setSlotForm({
-                        ...slotForm,
-                        roomOverride: event.target.value,
-                      })
-                    }
-                    maxLength={120}
-                  />
-                </label>
-                <div className="form-actions">
-                  <button
-                    type="submit"
-                    className="button filled"
-                    disabled={busy}
+          <Tabs
+            label={t("schedule.sectionsAria")}
+            initialId="slots"
+            items={[
+              {
+                id: "slots",
+                label: t("schedule.slots"),
+                badge: slots.length,
+                content: (
+                  <section
+                    className="academic-panel"
+                    aria-labelledby="slots-title"
                   >
-                    {slotForm.id
-                      ? t("schedule.saveSlot")
-                      : t("schedule.addSlot")}
-                  </button>
-                  {slotForm.id ? (
-                    <button
-                      type="button"
-                      className="button"
-                      onClick={() => setSlotForm(emptySlotForm)}
-                    >
-                      {t("common.cancel")}
-                    </button>
-                  ) : null}
-                </div>
-              </form>
-            </section>
-
-            <section
-              className="academic-panel"
-              aria-labelledby="rotation-title"
-            >
-              <div className="task-board-head">
-                <h2 id="rotation-title">{t("schedule.rotation")}</h2>
-                <span className="count-chip">
-                  {rotation
-                    ? t(rotationModeKeys[rotation.mode])
-                    : t("schedule.notConfigured")}
-                </span>
-              </div>
-              <form className="inline-form" onSubmit={submitRotation}>
-                <div className="field">
-                  <span>{t("schedule.mode")}</span>
-                  <CustomSelect
-                    ariaLabel={t("schedule.mode")}
-                    className="select-field"
-                    value={rotationForm.mode}
-                    onChange={(value) =>
-                      setRotationForm({
-                        ...rotationForm,
-                        mode: value as RotationMode,
-                      })
-                    }
-                    options={[
-                      {
-                        value: "weekly_ab",
-                        label: t("schedule.rotationMode.weekly_ab"),
-                      },
-                      {
-                        value: "parity",
-                        label: t("schedule.rotationMode.parity"),
-                      },
-                      {
-                        value: "day_cycle",
-                        label: t("schedule.rotationMode.day_cycle"),
-                      },
-                    ]}
-                  />
-                </div>
-                <DateField
-                  label={t("schedule.anchor")}
-                  fieldClassName="field narrow"
-                  value={rotationForm.anchorDate}
-                  onChange={(anchorDate) =>
-                    setRotationForm({ ...rotationForm, anchorDate })
-                  }
-                  required
-                />
-                {rotationForm.mode === "day_cycle" ? (
-                  <label className="field">
-                    <span>{t("schedule.cycleComma")}</span>
-                    <input
-                      className="text-field"
-                      value={rotationForm.dayCycle}
-                      onChange={(event) =>
-                        setRotationForm({
-                          ...rotationForm,
-                          dayCycle: event.target.value,
-                        })
-                      }
-                      placeholder={t("schedule.cyclePlaceholder")}
-                      required
-                    />
-                  </label>
-                ) : (
-                  <>
-                    <label className="field narrow">
-                      <span>{t("schedule.cycle")}</span>
-                      <input
-                        className="text-field"
-                        type="number"
-                        min={1}
-                        max={12}
-                        value={rotationForm.cycleLength}
-                        onChange={(event) =>
-                          setRotationForm({
-                            ...rotationForm,
-                            cycleLength: Number(event.target.value),
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="field">
-                      <span>{t("schedule.labels")}</span>
-                      <input
-                        className="text-field"
-                        value={rotationForm.labels}
-                        onChange={(event) =>
-                          setRotationForm({
-                            ...rotationForm,
-                            labels: event.target.value,
-                          })
-                        }
-                        placeholder={t("schedule.labelsPlaceholder")}
-                      />
-                    </label>
-                  </>
-                )}
-                <div className="form-actions">
-                  <button
-                    type="submit"
-                    className="button filled"
-                    disabled={busy}
-                  >
-                    {t("schedule.saveRotation")}
-                  </button>
-                </div>
-              </form>
-            </section>
-          </div>
-
-          <div className="schedule-grid">
-            <section
-              className="academic-panel"
-              aria-labelledby="holidays-title"
-            >
-              <div className="task-board-head">
-                <h2 id="holidays-title">{t("schedule.holidays")}</h2>
-                <span className="count-chip">{holidays.length}</span>
-              </div>
-              {holidays.length === 0 ? (
-                <p className="empty-state">{t("schedule.noHolidays")}</p>
-              ) : (
-                <ul className="mini-list">
-                  {holidays.map((holiday) => (
-                    <li key={holiday.id}>
-                      <span className="mini-item">
-                        <span>{holiday.name}</span>
-                        <span className="quiet">{holiday.date}</span>
-                      </span>
-                      <button
-                        type="button"
-                        className="mini-action danger"
-                        onClick={() => void removeHoliday(holiday)}
-                        disabled={busy}
-                        aria-label={t("schedule.deleteHolidayAria", {
-                          name: holiday.name,
-                        })}
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <form className="inline-form" onSubmit={submitHoliday}>
-                <DateField
-                  label={t("common.date")}
-                  fieldClassName="field narrow"
-                  value={holidayForm.date}
-                  onChange={(date) => setHolidayForm({ ...holidayForm, date })}
-                  required
-                />
-                <label className="field">
-                  <span>{t("common.name")}</span>
-                  <input
-                    className="text-field"
-                    value={holidayForm.name}
-                    onChange={(event) =>
-                      setHolidayForm({
-                        ...holidayForm,
-                        name: event.target.value,
-                      })
-                    }
-                    maxLength={120}
-                    required
-                  />
-                </label>
-                <div className="form-actions">
-                  <button
-                    type="submit"
-                    className="button filled"
-                    disabled={busy}
-                  >
-                    {t("schedule.addHoliday")}
-                  </button>
-                </div>
-              </form>
-            </section>
-
-            <section
-              className="academic-panel"
-              aria-labelledby="exceptions-title"
-            >
-              <div className="task-board-head">
-                <h2 id="exceptions-title">{t("schedule.exceptions")}</h2>
-                <span className="count-chip">{exceptions.length}</span>
-              </div>
-              {exceptions.length === 0 ? (
-                <p className="empty-state">{t("schedule.noExceptions")}</p>
-              ) : (
-                <ul className="mini-list">
-                  {exceptions.map((exception) => (
-                    <li key={exception.id}>
-                      <span className="mini-item">
-                        <span>
-                          {t(kindLabelKeys[exception.kind])} · {exception.date}
-                        </span>
-                        <span className="quiet">
-                          {slotLabel(exception.classSlotId)}
-                          {exception.newStartTime
-                            ? ` · ${exception.newStartTime}–${exception.newEndTime ?? ""}`
-                            : ""}
-                          {exception.newRoom ? ` · ${exception.newRoom}` : ""}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        className="mini-action danger"
-                        onClick={() => void removeException(exception)}
-                        disabled={busy}
-                        aria-label={t("schedule.deleteExceptionAria", {
-                          date: exception.date,
-                        })}
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <form className="inline-form" onSubmit={submitException}>
-                <div className="field">
-                  <span>{t("schedule.slot")}</span>
-                  <CustomSelect
-                    ariaLabel={t("schedule.slot")}
-                    className="select-field"
-                    value={exceptionForm.slotId}
-                    onChange={(value) =>
-                      setExceptionForm({ ...exceptionForm, slotId: value })
-                    }
-                    required
-                    options={[
-                      { value: "", label: t("common.choose") },
-                      ...slots.map((slot) => ({
-                        value: slot.id,
-                        label: slotLabel(slot.id),
-                      })),
-                    ]}
-                  />
-                </div>
-                <DateField
-                  label={t("common.date")}
-                  fieldClassName="field narrow"
-                  value={exceptionForm.date}
-                  onChange={(date) =>
-                    setExceptionForm({ ...exceptionForm, date })
-                  }
-                  required
-                />
-                <div className="field">
-                  <span>{t("common.type")}</span>
-                  <CustomSelect
-                    ariaLabel={t("common.type")}
-                    className="select-field"
-                    value={exceptionForm.kind}
-                    onChange={(value) =>
-                      setExceptionForm({
-                        ...exceptionForm,
-                        kind: value as ExceptionKind,
-                      })
-                    }
-                    options={Object.entries(kindLabelKeys).map(
-                      ([value, label]) => ({ value, label: t(label) }),
+                    <div className="task-board-head">
+                      <h2 id="slots-title">{t("schedule.slots")}</h2>
+                      <span className="count-chip">{slots.length}</span>
+                    </div>
+                    {slots.length === 0 ? (
+                      <p className="empty-state">{t("schedule.noSlots")}</p>
+                    ) : (
+                      <ul className="mini-list">
+                        {slots.map((slot) => (
+                          <li key={slot.id}>
+                            <span className="mini-item">
+                              <span>{slotLabel(slot.id)}</span>
+                              <span className="quiet">
+                                {slot.recurrence === "biweekly"
+                                  ? t("schedule.biweekly")
+                                  : t("schedule.weekly")}
+                                {slot.rotationKey
+                                  ? t("schedule.rotationSuffix", {
+                                      key: slot.rotationKey,
+                                    })
+                                  : ""}
+                                {slot.validFrom
+                                  ? t("schedule.fromSuffix", {
+                                      date: slot.validFrom,
+                                    })
+                                  : ""}
+                                {slot.validTo
+                                  ? t("schedule.untilSuffix", {
+                                      date: slot.validTo,
+                                    })
+                                  : ""}
+                              </span>
+                            </span>
+                            <button
+                              type="button"
+                              className="mini-action"
+                              onClick={() =>
+                                setSlotForm({
+                                  id: slot.id,
+                                  subjectId: slot.subjectId,
+                                  weekday: slot.weekday,
+                                  startTime: slot.startTime,
+                                  endTime: slot.endTime,
+                                  recurrence: slot.recurrence,
+                                  rotationKey: slot.rotationKey ?? "",
+                                  validFrom: slot.validFrom ?? "",
+                                  validTo: slot.validTo ?? "",
+                                  roomOverride: slot.roomOverride ?? "",
+                                })
+                              }
+                            >
+                              {t("common.edit")}
+                            </button>
+                            <button
+                              type="button"
+                              className="mini-action danger"
+                              onClick={() => void removeSlot(slot)}
+                              disabled={busy}
+                              aria-label={t("schedule.deleteSlotAria", {
+                                label: slotLabel(slot.id),
+                              })}
+                            >
+                              ×
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  />
-                </div>
-                {exceptionForm.kind !== "cancelled" ? (
-                  <>
-                    <label className="field narrow">
-                      <span>{t("schedule.newStart")}</span>
-                      <input
-                        className="text-field"
-                        type="time"
-                        value={exceptionForm.newStartTime}
-                        onChange={(event) =>
-                          setExceptionForm({
-                            ...exceptionForm,
-                            newStartTime: event.target.value,
-                          })
+
+                    <form className="inline-form" onSubmit={submitSlot}>
+                      <div className="field">
+                        <span>{t("common.subject")}</span>
+                        <CustomSelect
+                          ariaLabel={t("common.subject")}
+                          className="select-field"
+                          value={slotForm.subjectId}
+                          onChange={(value) =>
+                            setSlotForm({ ...slotForm, subjectId: value })
+                          }
+                          disabled={slotForm.id !== null}
+                          required
+                          options={[
+                            { value: "", label: t("common.choose") },
+                            ...subjects.map((subject) => ({
+                              value: subject.id,
+                              label: subject.name,
+                            })),
+                          ]}
+                        />
+                      </div>
+                      <div className="field">
+                        <span>{t("schedule.day")}</span>
+                        <CustomSelect
+                          ariaLabel={t("schedule.day")}
+                          className="select-field"
+                          value={String(slotForm.weekday)}
+                          onChange={(value) =>
+                            setSlotForm({ ...slotForm, weekday: Number(value) })
+                          }
+                          options={weekdayLabels.map((label, index) => ({
+                            value: String(index + 1),
+                            label,
+                          }))}
+                        />
+                      </div>
+                      <label className="field narrow">
+                        <span>{t("common.start")}</span>
+                        <input
+                          className="text-field"
+                          type="time"
+                          value={slotForm.startTime}
+                          onChange={(event) =>
+                            setSlotForm({
+                              ...slotForm,
+                              startTime: event.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </label>
+                      <label className="field narrow">
+                        <span>{t("common.end")}</span>
+                        <input
+                          className="text-field"
+                          type="time"
+                          value={slotForm.endTime}
+                          onChange={(event) =>
+                            setSlotForm({
+                              ...slotForm,
+                              endTime: event.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </label>
+                      <div className="field">
+                        <span>{t("schedule.recurrence")}</span>
+                        <CustomSelect
+                          ariaLabel={t("schedule.recurrence")}
+                          className="select-field"
+                          value={slotForm.recurrence}
+                          onChange={(value) =>
+                            setSlotForm({
+                              ...slotForm,
+                              recurrence: value as Recurrence,
+                            })
+                          }
+                          options={[
+                            { value: "weekly", label: t("schedule.weekly") },
+                            {
+                              value: "biweekly",
+                              label: t("schedule.biweekly"),
+                            },
+                          ]}
+                        />
+                      </div>
+                      <label className="field narrow">
+                        <span>{t("schedule.rotation")}</span>
+                        <input
+                          className="text-field"
+                          value={slotForm.rotationKey}
+                          onChange={(event) =>
+                            setSlotForm({
+                              ...slotForm,
+                              rotationKey: event.target.value,
+                            })
+                          }
+                          maxLength={40}
+                          placeholder="A"
+                        />
+                      </label>
+                      <DateField
+                        label={t("schedule.validFrom")}
+                        fieldClassName="field narrow"
+                        value={slotForm.validFrom}
+                        onChange={(validFrom) =>
+                          setSlotForm({ ...slotForm, validFrom })
                         }
                       />
-                    </label>
-                    <label className="field narrow">
-                      <span>{t("schedule.newEnd")}</span>
-                      <input
-                        className="text-field"
-                        type="time"
-                        value={exceptionForm.newEndTime}
-                        onChange={(event) =>
-                          setExceptionForm({
-                            ...exceptionForm,
-                            newEndTime: event.target.value,
-                          })
+                      <DateField
+                        label={t("schedule.validTo")}
+                        fieldClassName="field narrow"
+                        value={slotForm.validTo}
+                        onChange={(validTo) =>
+                          setSlotForm({ ...slotForm, validTo })
                         }
                       />
-                    </label>
-                    <label className="field">
-                      <span>{t("schedule.newRoom")}</span>
-                      <input
-                        className="text-field"
-                        value={exceptionForm.newRoom}
-                        onChange={(event) =>
-                          setExceptionForm({
-                            ...exceptionForm,
-                            newRoom: event.target.value,
-                          })
-                        }
-                        maxLength={120}
-                      />
-                    </label>
-                  </>
-                ) : null}
-                <div className="form-actions">
-                  <button
-                    type="submit"
-                    className="button filled"
-                    disabled={busy}
+                      <label className="field">
+                        <span>{t("common.room")}</span>
+                        <input
+                          className="text-field"
+                          value={slotForm.roomOverride}
+                          onChange={(event) =>
+                            setSlotForm({
+                              ...slotForm,
+                              roomOverride: event.target.value,
+                            })
+                          }
+                          maxLength={120}
+                        />
+                      </label>
+                      <div className="form-actions">
+                        <button
+                          type="submit"
+                          className="button filled"
+                          disabled={busy}
+                        >
+                          {slotForm.id
+                            ? t("schedule.saveSlot")
+                            : t("schedule.addSlot")}
+                        </button>
+                        {slotForm.id ? (
+                          <button
+                            type="button"
+                            className="button"
+                            onClick={() => setSlotForm(emptySlotForm)}
+                          >
+                            {t("common.cancel")}
+                          </button>
+                        ) : null}
+                      </div>
+                    </form>
+                  </section>
+                ),
+              },
+              {
+                id: "rotation",
+                label: t("schedule.rotation"),
+                content: (
+                  <section
+                    className="academic-panel"
+                    aria-labelledby="rotation-title"
                   >
-                    {t("schedule.addException")}
-                  </button>
-                </div>
-              </form>
-            </section>
-          </div>
+                    <div className="task-board-head">
+                      <h2 id="rotation-title">{t("schedule.rotation")}</h2>
+                      <span className="count-chip">
+                        {rotation
+                          ? t(rotationModeKeys[rotation.mode])
+                          : t("schedule.notConfigured")}
+                      </span>
+                    </div>
+                    <form className="inline-form" onSubmit={submitRotation}>
+                      <div className="field">
+                        <span>{t("schedule.mode")}</span>
+                        <CustomSelect
+                          ariaLabel={t("schedule.mode")}
+                          className="select-field"
+                          value={rotationForm.mode}
+                          onChange={(value) =>
+                            setRotationForm({
+                              ...rotationForm,
+                              mode: value as RotationMode,
+                            })
+                          }
+                          options={[
+                            {
+                              value: "weekly_ab",
+                              label: t("schedule.rotationMode.weekly_ab"),
+                            },
+                            {
+                              value: "parity",
+                              label: t("schedule.rotationMode.parity"),
+                            },
+                            {
+                              value: "day_cycle",
+                              label: t("schedule.rotationMode.day_cycle"),
+                            },
+                          ]}
+                        />
+                      </div>
+                      <DateField
+                        label={t("schedule.anchor")}
+                        fieldClassName="field narrow"
+                        value={rotationForm.anchorDate}
+                        onChange={(anchorDate) =>
+                          setRotationForm({ ...rotationForm, anchorDate })
+                        }
+                        required
+                      />
+                      {rotationForm.mode === "day_cycle" ? (
+                        <label className="field">
+                          <span>{t("schedule.cycleComma")}</span>
+                          <input
+                            className="text-field"
+                            value={rotationForm.dayCycle}
+                            onChange={(event) =>
+                              setRotationForm({
+                                ...rotationForm,
+                                dayCycle: event.target.value,
+                              })
+                            }
+                            placeholder={t("schedule.cyclePlaceholder")}
+                            required
+                          />
+                        </label>
+                      ) : (
+                        <>
+                          <label className="field narrow">
+                            <span>{t("schedule.cycle")}</span>
+                            <input
+                              className="text-field"
+                              type="number"
+                              min={1}
+                              max={12}
+                              value={rotationForm.cycleLength}
+                              onChange={(event) =>
+                                setRotationForm({
+                                  ...rotationForm,
+                                  cycleLength: Number(event.target.value),
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="field">
+                            <span>{t("schedule.labels")}</span>
+                            <input
+                              className="text-field"
+                              value={rotationForm.labels}
+                              onChange={(event) =>
+                                setRotationForm({
+                                  ...rotationForm,
+                                  labels: event.target.value,
+                                })
+                              }
+                              placeholder={t("schedule.labelsPlaceholder")}
+                            />
+                          </label>
+                        </>
+                      )}
+                      <div className="form-actions">
+                        <button
+                          type="submit"
+                          className="button filled"
+                          disabled={busy}
+                        >
+                          {t("schedule.saveRotation")}
+                        </button>
+                      </div>
+                    </form>
+                  </section>
+                ),
+              },
+              {
+                id: "holidays",
+                label: t("schedule.holidays"),
+                badge: holidays.length,
+                content: (
+                  <section
+                    className="academic-panel"
+                    aria-labelledby="holidays-title"
+                  >
+                    <div className="task-board-head">
+                      <h2 id="holidays-title">{t("schedule.holidays")}</h2>
+                      <span className="count-chip">{holidays.length}</span>
+                    </div>
+                    {holidays.length === 0 ? (
+                      <p className="empty-state">{t("schedule.noHolidays")}</p>
+                    ) : (
+                      <ul className="mini-list">
+                        {holidays.map((holiday) => (
+                          <li key={holiday.id}>
+                            <span className="mini-item">
+                              <span>{holiday.name}</span>
+                              <span className="quiet">{holiday.date}</span>
+                            </span>
+                            <button
+                              type="button"
+                              className="mini-action danger"
+                              onClick={() => void removeHoliday(holiday)}
+                              disabled={busy}
+                              aria-label={t("schedule.deleteHolidayAria", {
+                                name: holiday.name,
+                              })}
+                            >
+                              ×
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <form className="inline-form" onSubmit={submitHoliday}>
+                      <DateField
+                        label={t("common.date")}
+                        fieldClassName="field narrow"
+                        value={holidayForm.date}
+                        onChange={(date) =>
+                          setHolidayForm({ ...holidayForm, date })
+                        }
+                        required
+                      />
+                      <label className="field">
+                        <span>{t("common.name")}</span>
+                        <input
+                          className="text-field"
+                          value={holidayForm.name}
+                          onChange={(event) =>
+                            setHolidayForm({
+                              ...holidayForm,
+                              name: event.target.value,
+                            })
+                          }
+                          maxLength={120}
+                          required
+                        />
+                      </label>
+                      <div className="form-actions">
+                        <button
+                          type="submit"
+                          className="button filled"
+                          disabled={busy}
+                        >
+                          {t("schedule.addHoliday")}
+                        </button>
+                      </div>
+                    </form>
+                  </section>
+                ),
+              },
+              {
+                id: "exceptions",
+                label: t("schedule.exceptions"),
+                badge: exceptions.length,
+                content: (
+                  <section
+                    className="academic-panel"
+                    aria-labelledby="exceptions-title"
+                  >
+                    <div className="task-board-head">
+                      <h2 id="exceptions-title">{t("schedule.exceptions")}</h2>
+                      <span className="count-chip">{exceptions.length}</span>
+                    </div>
+                    {exceptions.length === 0 ? (
+                      <p className="empty-state">
+                        {t("schedule.noExceptions")}
+                      </p>
+                    ) : (
+                      <ul className="mini-list">
+                        {exceptions.map((exception) => (
+                          <li key={exception.id}>
+                            <span className="mini-item">
+                              <span>
+                                {t(kindLabelKeys[exception.kind])} ·{" "}
+                                {exception.date}
+                              </span>
+                              <span className="quiet">
+                                {slotLabel(exception.classSlotId)}
+                                {exception.newStartTime
+                                  ? ` · ${exception.newStartTime}–${exception.newEndTime ?? ""}`
+                                  : ""}
+                                {exception.newRoom
+                                  ? ` · ${exception.newRoom}`
+                                  : ""}
+                              </span>
+                            </span>
+                            <button
+                              type="button"
+                              className="mini-action danger"
+                              onClick={() => void removeException(exception)}
+                              disabled={busy}
+                              aria-label={t("schedule.deleteExceptionAria", {
+                                date: exception.date,
+                              })}
+                            >
+                              ×
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <form className="inline-form" onSubmit={submitException}>
+                      <div className="field">
+                        <span>{t("schedule.slot")}</span>
+                        <CustomSelect
+                          ariaLabel={t("schedule.slot")}
+                          className="select-field"
+                          value={exceptionForm.slotId}
+                          onChange={(value) =>
+                            setExceptionForm({
+                              ...exceptionForm,
+                              slotId: value,
+                            })
+                          }
+                          required
+                          options={[
+                            { value: "", label: t("common.choose") },
+                            ...slots.map((slot) => ({
+                              value: slot.id,
+                              label: slotLabel(slot.id),
+                            })),
+                          ]}
+                        />
+                      </div>
+                      <DateField
+                        label={t("common.date")}
+                        fieldClassName="field narrow"
+                        value={exceptionForm.date}
+                        onChange={(date) =>
+                          setExceptionForm({ ...exceptionForm, date })
+                        }
+                        required
+                      />
+                      <div className="field">
+                        <span>{t("common.type")}</span>
+                        <CustomSelect
+                          ariaLabel={t("common.type")}
+                          className="select-field"
+                          value={exceptionForm.kind}
+                          onChange={(value) =>
+                            setExceptionForm({
+                              ...exceptionForm,
+                              kind: value as ExceptionKind,
+                            })
+                          }
+                          options={Object.entries(kindLabelKeys).map(
+                            ([value, label]) => ({ value, label: t(label) }),
+                          )}
+                        />
+                      </div>
+                      {exceptionForm.kind !== "cancelled" ? (
+                        <>
+                          <label className="field narrow">
+                            <span>{t("schedule.newStart")}</span>
+                            <input
+                              className="text-field"
+                              type="time"
+                              value={exceptionForm.newStartTime}
+                              onChange={(event) =>
+                                setExceptionForm({
+                                  ...exceptionForm,
+                                  newStartTime: event.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="field narrow">
+                            <span>{t("schedule.newEnd")}</span>
+                            <input
+                              className="text-field"
+                              type="time"
+                              value={exceptionForm.newEndTime}
+                              onChange={(event) =>
+                                setExceptionForm({
+                                  ...exceptionForm,
+                                  newEndTime: event.target.value,
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="field">
+                            <span>{t("schedule.newRoom")}</span>
+                            <input
+                              className="text-field"
+                              value={exceptionForm.newRoom}
+                              onChange={(event) =>
+                                setExceptionForm({
+                                  ...exceptionForm,
+                                  newRoom: event.target.value,
+                                })
+                              }
+                              maxLength={120}
+                            />
+                          </label>
+                        </>
+                      ) : null}
+                      <div className="form-actions">
+                        <button
+                          type="submit"
+                          className="button filled"
+                          disabled={busy}
+                        >
+                          {t("schedule.addException")}
+                        </button>
+                      </div>
+                    </form>
+                  </section>
+                ),
+              },
+            ]}
+          />
         </>
       )}
     </>

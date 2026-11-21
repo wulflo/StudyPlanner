@@ -443,19 +443,6 @@ code,
   color: transparent;
 }
 
-.local-chip {
-  border: 1px solid
-    color-mix(in srgb, var(--md-sys-color-primary) 26%, transparent);
-  background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
-  color: var(--md-sys-color-primary);
-  border-radius: 999px;
-  padding: 2px 9px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
 .topbar-meta {
   display: flex;
   align-items: center;
@@ -786,15 +773,25 @@ code,
 .button {
   border: 1px solid transparent;
   border-radius: var(--md-radius-sm);
-  padding: 10px 20px;
+  padding: 7px 14px;
+  font-size: 0.9rem;
   font-weight: 650;
-  line-height: 1.25;
+  line-height: 1.2;
   transition:
     transform var(--md-motion-duration) var(--md-motion-ease),
     box-shadow var(--md-motion-duration) var(--md-motion-ease),
     background-color var(--md-motion-duration) var(--md-motion-ease),
     border-color var(--md-motion-duration) var(--md-motion-ease),
     filter var(--md-motion-duration) var(--md-motion-ease);
+}
+
+/* Navegación de semana/mes: botones cortos para no robar ancho a la grilla.
+   Se define antes que las reglas más específicas de las listas para no
+   invertir la cascada. */
+.week-nav .button {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 /* Separación mínima entre botones contiguos cuando el contenedor no usa gap. */
@@ -1533,8 +1530,25 @@ code,
 
 .task-board-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
+}
+
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.inline-loading {
+  margin: 6px 0 10px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.84rem;
 }
 
 .task-board-head h2 {
@@ -1924,6 +1938,122 @@ code,
   }
 }
 
+/* Pestañas horizontales para subsecciones largas. */
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.tabs-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  scrollbar-width: thin;
+}
+
+.tab-button {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tab-button:hover {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+  color: var(--md-sys-color-on-surface);
+}
+
+.tab-button.is-active {
+  color: var(--md-sys-color-primary);
+}
+
+.tab-button.is-active::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -3px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--md-sys-color-primary);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--md-sys-color-primary) 14%, transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.tabs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Filtros de «Temas de estudio»: materia + período programado. */
+.study-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.study-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid var(--md-card-border);
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-surface-container-high) 70%,
+    transparent
+  );
+}
+
+.chip-toggle {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.chip-toggle:hover {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
+}
+
+.chip-toggle.is-active {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
 /* Estructura académica. */
 .academic-grid {
   display: grid;
@@ -2166,6 +2296,13 @@ code,
   font-size: 0.76rem;
 }
 
+.inline-form > .button {
+  align-self: end;
+  justify-self: start;
+  width: auto;
+  min-height: 40px;
+}
+
 .mini-action {
   flex: 0 0 auto;
   border: 0;
@@ -2187,6 +2324,32 @@ code,
 
 .mini-action.danger:hover {
   background: color-mix(in srgb, var(--md-sys-color-error) 14%, transparent);
+}
+
+/* Cuando el propio ítem de la lista lleva acciones, el texto ocupa el ancho
+   disponible y los botones quedan alineados a la derecha. Las tarjetas que son
+   solo un botón (año, término, tema) conservan su apilado vertical. */
+.mini-list > .mini-item {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.mini-list
+  > .mini-item
+  > :not(.mini-action):not(.button):not(.task-board-head) {
+  flex: 1;
+  min-width: 0;
+}
+
+.mini-list > .mini-item > .mini-action,
+.mini-list > .mini-item > .button,
+.mini-list > .mini-item > .task-board-head {
+  flex: 0 0 auto;
+}
+
+.mini-list > .mini-item > .task-board-head {
+  justify-content: flex-end;
 }
 
 .inline-form {
@@ -2606,13 +2769,6 @@ code,
   border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 
-.inline-form > .button {
-  align-self: end;
-  justify-self: start;
-  width: auto;
-  min-height: 40px;
-}
-
 .color-field {
   width: 100%;
   height: 40px;
@@ -2724,7 +2880,47 @@ code,
 .week-nav {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+}
+
+/* La cabecera del calendario ocupa todo el ancho: el término queda a la
+   izquierda y la navegación del mes a la derecha, con el título centrado. */
+.calendar-tools {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.calendar-tools .week-nav {
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.calendar-tools .week-nav h2 {
+  flex: 0 0 auto;
+  min-width: 180px;
+  margin: 0;
+  text-align: center;
+  font-size: 1.1rem;
+  text-transform: capitalize;
+}
+
+@media (max-width: 720px) {
+  .calendar-tools {
+    align-items: stretch;
+  }
+
+  .calendar-tools .week-nav {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .calendar-tools .week-nav h2 {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .week-grid {

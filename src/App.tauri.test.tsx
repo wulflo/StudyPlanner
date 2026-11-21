@@ -1153,9 +1153,14 @@ describe("App con IPC de Tauri", () => {
         level: 1,
       }),
     ).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Años y términos" }));
     expect(await screen.findByText("2026")).toBeInTheDocument();
     expect(await screen.findByText("Primer semestre")).toBeInTheDocument();
-    expect(await screen.findByText("Álgebra lineal")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /^Materias/ }));
+    expect(
+      await screen.findByRole("heading", { name: "Álgebra lineal" }),
+    ).toBeInTheDocument();
 
     const input = screen.getByLabelText("Materia");
     await user.type(input, "Física I");
@@ -1190,6 +1195,7 @@ describe("App con IPC de Tauri", () => {
 
     await goToSection(user, "Materias");
 
+    await user.click(screen.getByRole("tab", { name: /^Plan de estudios/ }));
     expect(
       await screen.findByRole("heading", { name: "Plan de estudios" }),
     ).toBeInTheDocument();
@@ -1459,9 +1465,12 @@ describe("App con IPC de Tauri", () => {
     expect(
       await screen.findByRole("heading", { name: "Exámenes", level: 1 }),
     ).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Nuevo examen" }));
     expect(
       screen.getByRole("heading", { name: "Nuevo examen" }),
     ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /^Temas/ }));
     expect(screen.getByRole("button", { name: "Crear tema" })).toBeDisabled();
   });
 
