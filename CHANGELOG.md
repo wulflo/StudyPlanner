@@ -2,6 +2,25 @@
 
 Todos los cambios relevantes de Study Planner se registran acá. El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado pretende seguir [SemVer](https://semver.org/lang/es/).
 
+## [0.2.5] — 2026-11-23 — Borrados desbloqueados, término vigente y formularios consistentes
+
+### Agregado
+
+- Botón **Borrar rotación** en Horario > Rotación: permite quitar una rotación guardada y, recién ahí, borrar el término que la contenía.
+- Acción **Borrar asistencia** por franja en Horario, para limpiar registros huérfanos (por ejemplo, después de cambiar el día de una clase) que dejaban la franja imborrable.
+- `listAllSubjects()` y `pickDefaultTerm()`: Exámenes, Notas, Tareas, Estudio, Fortalezas y Calendario ven materias de todos los años y términos, y Hoy/Horario/Calendario arrancan en el término vigente (o el más reciente).
+
+### Cambiado
+
+- Las notas generadas por un examen se marcan como «examen» y su borrado desde Notas queda deshabilitado: se quitan quitando el resultado en Exámenes.
+- La app y el snap comparten la versión `0.2.5` y el pipeline de release publica AppImage, `.deb`, `.rpm`, NSIS, MSI, DMG y snap.
+
+### Corregido
+
+- Borrar una tarea con subtareas ya no muestra un aviso de éxito falso ni refresca la lista antes de que termine la operación.
+- Los formularios descartan referencias a entidades borradas (escalas, categorías, franjas, temas, años y términos) en vez de reenviar IDs muertos.
+- Reducir el rango de fechas de un año ya no deja sus términos ineditables: ahora se rechaza con un mensaje claro.
+
 ## [0.2.4] — 2026-11-21 — Refinamiento visual integral y layout de Estudio corregido
 
 ### Agregado

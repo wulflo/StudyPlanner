@@ -16,7 +16,6 @@ import { getDateFnsLocale, useTranslation } from "../lib/i18n";
 import {
   type Exam,
   getWeekSchedule,
-  listAcademicYears,
   listExams,
   listSubjects,
   listTerms,
@@ -29,6 +28,7 @@ import {
   type TopicStudy,
   type VaultStatus,
 } from "../lib/ipc";
+import { pickDefaultTerm } from "../lib/term";
 
 function messageOf(reason: unknown): string {
   return reason instanceof Error ? reason.message : String(reason);
@@ -85,11 +85,12 @@ export function CalendarView({
 
     async function loadStructure() {
       try {
-        const years = await listAcademicYears();
-        const loadedTerms = years[0] ? await listTerms(years[0].id) : [];
+        const loadedTerms = await listTerms(null);
         if (!cancelled) {
           setTerms(loadedTerms);
-          setTermId((current) => current || (loadedTerms[0]?.id ?? ""));
+          setTermId(
+            (current) => current || (pickDefaultTerm(loadedTerms)?.id ?? ""),
+          );
         }
       } catch (reason) {
         if (!cancelled) {

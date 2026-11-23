@@ -115,6 +115,21 @@ impl Store {
         let end_date = normalize_date(end_date).map_err(StoreError::InvalidAcademic)?;
         validate_date_range(&start_date, &end_date).map_err(StoreError::InvalidAcademic)?;
 
+        // No se puede acortar un año dejando términos vivos fuera del rango:
+        // después `update_term` rechazaría cualquier guardado de esos términos.
+        let displaced_terms: i64 = self.connection().query_row(
+            "SELECT count(*) FROM term
+             WHERE year_id = ?1 AND deleted_at IS NULL
+               AND (start_date < ?2 OR end_date > ?3)",
+            params![id, start_date, end_date],
+            |row| row.get(0),
+        )?;
+        if displaced_terms > 0 {
+            return Err(StoreError::InvalidAcademic(
+                "El nuevo rango excluye términos del año; ajustá esos términos primero.",
+            ));
+        }
+
         let changed = self.connection().execute(
             "UPDATE academic_year
              SET name = ?1, start_date = ?2, end_date = ?3,
@@ -1151,5 +1166,45 @@ mod tests {
         store.delete_rotation(&term.id).unwrap();
 
         store.delete_term(&term.id).unwrap();
+    }
+
+    #[test]
+    fn shortening_a_year_cannot_freeze_its_terms() {
+        let store = migrated_store();
+        let year = store
+            .create_academic_year("2026", "2026-03-01", "2026-12-20")
+            .unwrap();
+        let term = store
+            .create_term(
+                &year.id,
+                &TermInput {
+                    name: "Primer semestre".to_string(),
+                    kind: "semester".to_string(),
+                    start_date: "2026-03-02".to_string(),
+                    end_date: "2026-07-10".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert!(matches!(
+            store
+                .update_academic_year(&year.id, "2026 corto", "2026-06-30", "2026-12-20")
+                .unwrap_err(),
+            StoreError::InvalidAcademic(_)
+        ));
+
+        // El término sigue siendo editable con sus fechas originales.
+        let renamed = store
+            .update_term(
+                &term.id,
+                &TermInput {
+                    name: "Renombrado".to_string(),
+                    kind: "semester".to_string(),
+                    start_date: "2026-03-02".to_string(),
+                    end_date: "2026-07-10".to_string(),
+                },
+            )
+            .unwrap();
+        assert_eq!(renamed.name, "Renombrado");
     }
 }

@@ -14,6 +14,7 @@ import {
   type VaultStatus,
   type WeekSchedule,
 } from "../lib/ipc";
+import { pickDefaultTerm } from "../lib/term";
 
 function messageOf(reason: unknown): string {
   return reason instanceof Error ? reason.message : String(reason);
@@ -65,7 +66,7 @@ export function TodaySchedule({
         if (cancelled) {
           return;
         }
-        const nextTerm = terms[0]?.id ?? null;
+        const nextTerm = pickDefaultTerm(terms, new Date(today))?.id ?? null;
         setTermId(nextTerm);
         if (!nextTerm) {
           setNextClass(null);

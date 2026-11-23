@@ -2,7 +2,7 @@
 
 > **Última actualización:** 2026-11-22  
 > **Estado general:** Fases 0 a 5 completadas; planes de integridad, rediseño UI y refinamiento UX cerrados. En modo mantenimiento.  
-> **Versión actual:** `0.2.4` · `schema_version = 4` · `export_format_version = 1`  
+> **Versión actual:** `0.2.5` · `schema_version = 4` · `export_format_version = 1`  
 > **Repositorio:** [`wulflo/StudyPlanner`](https://github.com/wulflo/StudyPlanner)
 
 Este documento consolida la fuente de verdad del proyecto tras el cierre de todas las fases de desarrollo inicial y los planes de endurecimiento, remodelación visual y refinamiento de experiencia de usuario. Si en algún momento existe discrepancia entre este registro y el código fuente, prevalece el código y este archivo debe actualizarse en el mismo commit.

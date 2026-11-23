@@ -8,12 +8,10 @@ import {
   createTaskFull,
   deleteSavedFilter,
   deleteTag,
-  listAcademicYears,
+  listAllSubjects,
   listSavedFilters,
-  listSubjects,
   listTags,
   listTasks,
-  listTerms,
   listUndoEntries,
   type SavedFilter,
   type Subject,
@@ -171,8 +169,8 @@ export function TasksView({
   error: string | null;
   onGoVault: () => void;
   onCreate: (title: string) => Promise<boolean>;
-  onToggle: (task: Task) => void;
-  onDelete: (task: Task) => void;
+  onToggle: (task: Task) => Promise<boolean>;
+  onDelete: (task: Task) => Promise<boolean>;
   onTasksChanged: (tasks: Task[]) => void;
 }) {
   const { t } = useTranslation();
@@ -247,9 +245,7 @@ export function TasksView({
       }
 
       try {
-        const years = await listAcademicYears();
-        const terms = years[0] ? await listTerms(years[0].id) : [];
-        const loadedSubjects = terms[0] ? await listSubjects(terms[0].id) : [];
+        const loadedSubjects = await listAllSubjects();
         if (!cancelled) {
           setSubjects(loadedSubjects);
         }
@@ -368,27 +364,29 @@ export function TasksView({
 
   async function handleToggle(task: Task) {
     setLocalError(null);
-    onToggle(task);
+    const changed = await onToggle(task);
+    if (!changed) {
+      return;
+    }
     if (filterIsActive) {
-      // La vista global se actualiza en App; re-evaluamos el filtro enseguida.
-      window.setTimeout(() => {
-        void searchTasks(activeFilter).then(setSearchResults);
-      }, 0);
+      // La vista global se actualiza en App; re-evaluamos el filtro.
+      setSearchResults(await searchTasks(activeFilter));
     }
   }
 
   async function handleDelete(task: Task) {
     setLocalError(null);
-    onDelete(task);
-    window.setTimeout(async () => {
-      try {
-        await refreshAux();
-        await refreshTasks();
-        setNotice(t("tasks.taskDeletedNotice"));
-      } catch (reason) {
-        setLocalError(messageOf(reason));
-      }
-    }, 0);
+    const deleted = await onDelete(task);
+    if (!deleted) {
+      return;
+    }
+    try {
+      await refreshAux();
+      await refreshTasks();
+      setNotice(t("tasks.taskDeletedNotice"));
+    } catch (reason) {
+      setLocalError(messageOf(reason));
+    }
   }
 
   async function handleUndo(entry: UndoEntry) {

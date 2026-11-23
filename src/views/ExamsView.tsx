@@ -13,11 +13,9 @@ import {
   type ExamInput,
   type ExamResultStatus,
   linkExamTopic,
-  listAcademicYears,
+  listAllSubjects,
   listExams,
   listExamTopics,
-  listSubjects,
-  listTerms,
   listTopics,
   type Subject,
   type Topic,
@@ -156,9 +154,7 @@ export function ExamsView({
 
     async function loadSubjects() {
       try {
-        const years = await listAcademicYears();
-        const terms = years[0] ? await listTerms(years[0].id) : [];
-        const loaded = terms[0] ? await listSubjects(terms[0].id) : [];
+        const loaded = await listAllSubjects();
         if (!cancelled) {
           setSubjects(loaded);
           setSubjectId((current) => current || (loaded[0]?.id ?? ""));
@@ -267,6 +263,17 @@ export function ExamsView({
     ]);
     setExams(loadedExams);
     setTopics(loadedTopics);
+    setExamForm((current) =>
+      current.id && !loadedExams.some((exam) => exam.id === current.id)
+        ? emptyExam
+        : current,
+    );
+    setTopicForm((current) =>
+      current.parentTopicId &&
+      !loadedTopics.some((topic) => topic.id === current.parentTopicId)
+        ? { ...current, parentTopicId: "" }
+        : current,
+    );
   }
 
   async function submitExam(event: FormEvent<HTMLFormElement>) {

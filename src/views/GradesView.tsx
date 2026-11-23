@@ -15,12 +15,10 @@ import {
   type GradeEntry,
   type GradeScale,
   getSubjectGrade,
-  listAcademicYears,
+  listAllSubjects,
   listGradeCategories,
   listGradeEntries,
   listGradeScales,
-  listSubjects,
-  listTerms,
   type Subject,
   type SubjectGrade,
   type VaultStatus,
@@ -119,9 +117,7 @@ export function GradesView({
     async function loadSubjects() {
       setLoading(true);
       try {
-        const years = await listAcademicYears();
-        const terms = years[0] ? await listTerms(years[0].id) : [];
-        const loaded = terms[0] ? await listSubjects(terms[0].id) : [];
+        const loaded = await listAllSubjects();
         if (!cancelled) {
           setSubjects(loaded);
           setSubjectId((current) => current || (loaded[0]?.id ?? ""));
@@ -167,14 +163,18 @@ export function GradesView({
           setGrade(loadedGrade);
           const defaultScale =
             loadedScales.find((scale) => scale.isDefault) ?? loadedScales[0];
-          setCategoryForm((current) => ({
-            ...current,
-            scaleId: current.scaleId || (defaultScale?.id ?? ""),
-          }));
-          setEntryForm((current) => ({
-            ...current,
-            categoryId: current.categoryId || (loadedCategories[0]?.id ?? ""),
-          }));
+          setCategoryForm((current) =>
+            loadedScales.some((scale) => scale.id === current.scaleId)
+              ? current
+              : { ...current, scaleId: defaultScale?.id ?? "" },
+          );
+          setEntryForm((current) =>
+            loadedCategories.some(
+              (category) => category.id === current.categoryId,
+            )
+              ? current
+              : { ...current, categoryId: loadedCategories[0]?.id ?? "" },
+          );
         }
       } catch (reason) {
         if (!cancelled) {
@@ -208,6 +208,18 @@ export function GradesView({
     setCategories(loadedCategories);
     setEntries(loadedEntries);
     setGrade(loadedGrade);
+    const defaultScale =
+      loadedScales.find((scale) => scale.isDefault) ?? loadedScales[0];
+    setCategoryForm((current) =>
+      loadedScales.some((scale) => scale.id === current.scaleId)
+        ? current
+        : { ...current, scaleId: defaultScale?.id ?? "" },
+    );
+    setEntryForm((current) =>
+      loadedCategories.some((category) => category.id === current.categoryId)
+        ? current
+        : { ...current, categoryId: loadedCategories[0]?.id ?? "" },
+    );
   }
 
   async function handleCreateScale(event: FormEvent<HTMLFormElement>) {
@@ -808,6 +820,9 @@ export function GradesView({
                                   max: cpToValue(entry.maxCp, precision),
                                 })}
                                 {entry.date ? ` · ${entry.date}` : ""}
+                                {entry.examId
+                                  ? ` · ${t("grades.fromExam")}`
+                                  : ""}
                               </span>
                             </div>
                             <button
@@ -816,6 +831,12 @@ export function GradesView({
                               aria-label={t("grades.deleteEntryAria", {
                                 title: entry.title,
                               })}
+                              title={
+                                entry.examId
+                                  ? t("grades.examEntryNoDelete")
+                                  : undefined
+                              }
+                              disabled={entry.examId !== null}
                               onClick={() => void handleDeleteEntry(entry)}
                             >
                               ×

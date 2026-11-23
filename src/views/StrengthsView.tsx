@@ -6,9 +6,7 @@ import { useTranslation } from "../lib/i18n";
 import {
   clearStrengthOverride,
   createSelfAssessment,
-  listAcademicYears,
-  listSubjects,
-  listTerms,
+  listAllSubjects,
   listTopicStudies,
   reviewTopic,
   type StrengthClassification,
@@ -67,9 +65,7 @@ export function StrengthsView({
 
     async function loadStructure() {
       try {
-        const years = await listAcademicYears();
-        const terms = years[0] ? await listTerms(years[0].id) : [];
-        const loadedSubjects = terms[0] ? await listSubjects(terms[0].id) : [];
+        const loadedSubjects = await listAllSubjects();
         if (!cancelled) {
           setSubjects(loadedSubjects);
           setSubjectId((current) => current || (loadedSubjects[0]?.id ?? ""));

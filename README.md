@@ -7,7 +7,7 @@ Schedules, subjects, exams, grades, tasks, notes, and spaced repetition in a sin
 **English** · [Español](README.es.md)
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
-[![Status: v0.2.4](https://img.shields.io/badge/status-v0.2.4-brightgreen.svg)](CHANGELOG.md)
+[![Status: v0.2.5](https://img.shields.io/badge/status-v0.2.5-brightgreen.svg)](CHANGELOG.md)
 [![Tauri 2.12](https://img.shields.io/badge/Tauri-2.12-24C8D8?logo=tauri&logoColor=white)](https://tauri.app)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![Platforms: Linux | Windows | macOS](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)](#requirements)
@@ -18,7 +18,7 @@ Schedules, subjects, exams, grades, tasks, notes, and spaced repetition in a sin
 
 ## Project status
 
-> **Phases 0 through 5 are complete and released.** `v0.2.4` ships as AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX), and macOS, with a signed cross-platform updater, local notifications, and MSIX packaging for the Microsoft Store. It builds on `v0.2.3` (accessible tabs across Subjects, Schedule, Grades and Exams, study topics with dated SM-2 reviews, paginated exams synced with grade entries, compact buttons, and a self-repairing migration checksum) with a full UI/UX refinement: opaque borders, accent-derived surfaces, structured list rows and a corrected Study layout where the Pomodoro form no longer overlaps "Explicable priority". Snap `study-planner` is published from the same release pipeline.
+> **Phases 0 through 5 are complete and released.** `v0.2.5` ships as AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX), and macOS, with a signed cross-platform updater, local notifications, and MSIX packaging for the Microsoft Store. It builds on `v0.2.4` (full UI/UX refinement: opaque borders, accent-derived surfaces, structured list rows and a corrected Study layout) and fixes the deletion dead ends (saved rotations, orphan attendance, tasks with subtasks), makes subjects from every year and term reachable across the app, and opens the current term by default. Snap `study-planner` is published from the same release pipeline.
 >
 > The app includes light, dark, and system themes, accent colors, a background tray mode, and reminders with optional sound.
 

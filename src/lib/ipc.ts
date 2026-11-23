@@ -891,6 +891,15 @@ export async function listSubjects(termId: string): Promise<Subject[]> {
   return invoke<Subject[]>("list_subjects", { termId });
 }
 
+/** Lista las materias de todos los términos, ordenadas por nombre. */
+export async function listAllSubjects(): Promise<Subject[]> {
+  const terms = await listTerms(null);
+  const groups = await Promise.all(terms.map((term) => listSubjects(term.id)));
+  return groups
+    .flat()
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
 export async function createSubject(
   termId: string,
   input: SubjectInput,

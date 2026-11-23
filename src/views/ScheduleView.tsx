@@ -14,6 +14,7 @@ import { Tabs } from "../components/Tabs";
 import { safeColor } from "../lib/color";
 import { getDateFnsLocale, useTranslation } from "../lib/i18n";
 import {
+  type AttendanceRecord,
   type AttendanceStatus,
   type ClassException,
   type ClassSlot,
@@ -25,10 +26,12 @@ import {
   deleteClassException,
   deleteClassSlot,
   deleteHoliday,
+  deleteRotation,
   type ExceptionKind,
   getRotation,
   getWeekSchedule,
   type Holiday,
+  listAttendance,
   listClassExceptions,
   listClassSlots,
   listHolidays,
@@ -46,6 +49,7 @@ import {
   type VaultStatus,
   type WeekSchedule,
 } from "../lib/ipc";
+import { pickDefaultTerm } from "../lib/term";
 
 const weekdayKeys = [
   "monday",
@@ -185,6 +189,9 @@ export function ScheduleView({
   const [slots, setSlots] = useState<ClassSlot[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [exceptions, setExceptions] = useState<ClassException[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<
+    AttendanceRecord[]
+  >([]);
   const [rotation, setRotation] = useState<RotationConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -206,6 +213,7 @@ export function ScheduleView({
       loadedSlots,
       loadedHolidays,
       loadedExceptions,
+      loadedAttendance,
       loadedRotation,
       loadedSubjects,
     ] = await Promise.all([
@@ -213,6 +221,7 @@ export function ScheduleView({
       listClassSlots(nextTerm),
       listHolidays(nextTerm),
       listClassExceptions(nextTerm),
+      listAttendance(nextTerm),
       getRotation(nextTerm),
       listSubjects(nextTerm),
     ]);
@@ -221,23 +230,26 @@ export function ScheduleView({
     setSlots(loadedSlots);
     setHolidays(loadedHolidays);
     setExceptions(loadedExceptions);
+    setAttendanceRecords(loadedAttendance);
     setRotation(loadedRotation);
     setRotationForm(rotationFormFrom(loadedRotation));
     setSubjects(loadedSubjects);
-    if (loadedSubjects.length > 0) {
-      setSlotForm((current) =>
-        current.id === null && current.subjectId === ""
-          ? { ...current, subjectId: loadedSubjects[0].id }
-          : current,
-      );
-    }
-    if (loadedSlots.length > 0) {
-      setExceptionForm((current) =>
-        current.slotId === ""
-          ? { ...current, slotId: loadedSlots[0].id }
-          : current,
-      );
-    }
+    setSlotForm((current) => {
+      if (
+        current.id !== null &&
+        !loadedSlots.some((slot) => slot.id === current.id)
+      ) {
+        return emptySlotForm;
+      }
+      return loadedSubjects.some((subject) => subject.id === current.subjectId)
+        ? current
+        : { ...current, subjectId: loadedSubjects[0]?.id ?? "" };
+    });
+    setExceptionForm((current) =>
+      loadedSlots.some((slot) => slot.id === current.slotId)
+        ? current
+        : { ...current, slotId: loadedSlots[0]?.id ?? "" },
+    );
   }, []);
 
   useEffect(() => {
@@ -256,7 +268,7 @@ export function ScheduleView({
           return;
         }
         setTerms(loadedTerms);
-        const nextTerm = loadedTerms[0]?.id ?? null;
+        const nextTerm = pickDefaultTerm(loadedTerms)?.id ?? null;
         setTermId(nextTerm);
         if (nextTerm) {
           await loadTerm(nextTerm, mondayOf(todayIso()));
@@ -348,7 +360,7 @@ export function ScheduleView({
     setTerms(loadedTerms);
     const nextTerm =
       loadedTerms.find((term) => term.id === preferredTerm)?.id ??
-      loadedTerms[0]?.id ??
+      pickDefaultTerm(loadedTerms)?.id ??
       null;
     setTermId(nextTerm);
     if (nextTerm) {
@@ -358,6 +370,7 @@ export function ScheduleView({
       setSlots([]);
       setHolidays([]);
       setExceptions([]);
+      setAttendanceRecords([]);
       setRotation(null);
       setSubjects([]);
     }
@@ -437,6 +450,19 @@ export function ScheduleView({
     });
   }
 
+  async function removeRotation() {
+    if (!termId) {
+      return;
+    }
+    await run(async () => {
+      await deleteRotation(termId);
+      setRotation(null);
+      setRotationForm(emptyRotationForm);
+      setNotice(t("schedule.rotationDeleted"));
+      await refreshAll(termId);
+    });
+  }
+
   async function markAttendance(
     occurrence: ScheduleOccurrence,
     status: AttendanceStatus | null,
@@ -449,7 +475,21 @@ export function ScheduleView({
       }
       if (termId) {
         setWeek(await getWeekSchedule(termId, weekStart));
+        setAttendanceRecords(await listAttendance(termId));
       }
+    });
+  }
+
+  async function removeSlotAttendance(slot: ClassSlot) {
+    await run(async () => {
+      const dates = attendanceRecords
+        .filter((record) => record.classSlotId === slot.id)
+        .map((record) => record.date);
+      for (const date of dates) {
+        await clearAttendance(slot.id, date);
+      }
+      setNotice(t("schedule.slotAttendanceCleared", { count: dates.length }));
+      await refreshAll(termId);
     });
   }
 
@@ -841,6 +881,22 @@ export function ScheduleView({
                             >
                               {t("common.edit")}
                             </button>
+                            {attendanceRecords.some(
+                              (record) => record.classSlotId === slot.id,
+                            ) ? (
+                              <button
+                                type="button"
+                                className="mini-action"
+                                onClick={() => void removeSlotAttendance(slot)}
+                                disabled={busy}
+                                aria-label={t(
+                                  "schedule.clearSlotAttendanceAria",
+                                  { label: slotLabel(slot.id) },
+                                )}
+                              >
+                                {t("schedule.clearSlotAttendance")}
+                              </button>
+                            ) : null}
                             <button
                               type="button"
                               className="mini-action danger"
@@ -1125,6 +1181,16 @@ export function ScheduleView({
                         >
                           {t("schedule.saveRotation")}
                         </button>
+                        {rotation ? (
+                          <button
+                            type="button"
+                            className="button danger"
+                            onClick={() => void removeRotation()}
+                            disabled={busy}
+                          >
+                            {t("schedule.deleteRotation")}
+                          </button>
+                        ) : null}
                       </div>
                     </form>
                   </section>

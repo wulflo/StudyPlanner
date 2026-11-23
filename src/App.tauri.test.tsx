@@ -104,6 +104,7 @@ const api = vi.hoisted(() => ({
   updateAcademicYear: vi.fn(),
   deleteAcademicYear: vi.fn(),
   listTerms: vi.fn(),
+  listAllSubjects: vi.fn(),
   createTerm: vi.fn(),
   updateTerm: vi.fn(),
   deleteTerm: vi.fn(),
@@ -804,6 +805,7 @@ beforeEach(() => {
   api.listAcademicYears.mockResolvedValue([academicYear]);
   api.listTerms.mockResolvedValue([academicTerm]);
   api.listSubjects.mockResolvedValue([algebra]);
+  api.listAllSubjects.mockResolvedValue([algebra]);
   api.createAcademicYear.mockResolvedValue(academicYear);
   api.updateAcademicYear.mockResolvedValue(academicYear);
   api.deleteAcademicYear.mockResolvedValue(undefined);
@@ -1028,6 +1030,30 @@ describe("App con IPC de Tauri", () => {
     await waitFor(() =>
       expect(screen.queryByText("Repasar matrices")).not.toBeInTheDocument(),
     );
+  });
+
+  it("no muestra éxito si el backend rechaza borrar una tarea con subtareas", async () => {
+    const user = userEvent.setup();
+    api.deleteTask.mockRejectedValue(
+      new Error("La tarea tiene subtareas vivas; borralas o movelas primero."),
+    );
+    render(<App />);
+
+    await goToSection(user, "Tareas");
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Eliminar «Repasar matrices»",
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "La tarea tiene subtareas vivas",
+    );
+    expect(
+      screen.queryByText(
+        "Tarea eliminada. Podés deshacerlo durante 5 minutos.",
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("abre el selector y muestra la bóveda elegida", async () => {
@@ -1328,6 +1354,65 @@ describe("App con IPC de Tauri", () => {
     );
   });
 
+  it("permite borrar la rotación guardada del término", async () => {
+    const user = userEvent.setup();
+    api.getRotation.mockResolvedValue({
+      id: "rotation-1",
+      termId: "term-1",
+      mode: "weekly_ab",
+      anchorDate: "2026-03-02",
+      cycleLength: 2,
+      labels: ["A", "B"],
+      dayCycle: [],
+      createdAt: "2026-11-08T10:00:00.000Z",
+      updatedAt: "2026-11-08T10:00:00.000Z",
+    });
+    render(<App />);
+
+    await goToSection(user, "Horario");
+    await user.click(await screen.findByRole("tab", { name: "Rotación" }));
+
+    await user.click(
+      await screen.findByRole("button", { name: "Borrar rotación" }),
+    );
+
+    await waitFor(() =>
+      expect(api.deleteRotation).toHaveBeenCalledWith("term-1"),
+    );
+    expect(await screen.findByText("Rotación borrada.")).toBeInTheDocument();
+  });
+
+  it("permite limpiar la asistencia huérfana para borrar una franja", async () => {
+    const user = userEvent.setup();
+    api.listClassSlots.mockResolvedValue([classSlot]);
+    api.listAttendance.mockResolvedValue([
+      {
+        id: "attendance-orphan",
+        classSlotId: "slot-1",
+        date: "2026-03-02",
+        status: "present",
+        note: null,
+        createdAt: "2026-11-08T10:00:00.000Z",
+        updatedAt: "2026-11-08T10:00:00.000Z",
+      },
+    ]);
+    render(<App />);
+
+    await goToSection(user, "Horario");
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Borrar toda la asistencia de/,
+      }),
+    );
+
+    await waitFor(() =>
+      expect(api.clearAttendance).toHaveBeenCalledWith("slot-1", "2026-03-02"),
+    );
+    expect(
+      await screen.findByText("Asistencia borrada (1)."),
+    ).toBeInTheDocument();
+  });
+
   it("muestra la próxima clase y registra la asistencia del día", async () => {
     const user = userEvent.setup();
     const today = todayIso();
@@ -1409,6 +1494,32 @@ describe("App con IPC de Tauri", () => {
     expect(api.getSubjectGrade).toHaveBeenCalledWith("subject-1");
   });
 
+  it("no permite borrar una nota generada por un examen", async () => {
+    const user = userEvent.setup();
+    api.listGradeScales.mockResolvedValue([gradeScale]);
+    api.listGradeCategories.mockResolvedValue(gradeCategories);
+    api.listGradeEntries.mockResolvedValue([
+      {
+        ...gradeEntries[0],
+        id: "entry-exam",
+        examId: "exam-1",
+        title: "Examen final",
+      },
+    ]);
+    api.getSubjectGrade.mockResolvedValue(subjectGrade);
+    render(<App />);
+
+    await goToSection(user, "Notas");
+    await user.click(await screen.findByRole("tab", { name: /^Entradas/ }));
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Eliminar nota Examen final",
+      }),
+    ).toBeDisabled();
+    expect(screen.getByText(/examen/)).toBeInTheDocument();
+  });
+
   it("busca tareas por texto en la bóveda", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -1472,6 +1583,23 @@ describe("App con IPC de Tauri", () => {
 
     await user.click(screen.getByRole("tab", { name: /^Temas/ }));
     expect(screen.getByRole("button", { name: "Crear tema" })).toBeDisabled();
+  });
+
+  it("muestra las materias de todos los términos en Exámenes", async () => {
+    const user = userEvent.setup();
+    api.listAllSubjects.mockResolvedValue([
+      algebra,
+      { ...algebra, id: "subject-2", name: "Física", termId: "term-2" },
+    ]);
+    render(<App />);
+
+    await goToSection(user, "Exámenes");
+    await selectCustomOption(user, "Materia", "Física");
+
+    expect(api.listAllSubjects).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(api.listExams).toHaveBeenCalledWith(null, "subject-2"),
+    );
   });
 
   it("evalúa un tema y aplica un override en Fortalezas", async () => {

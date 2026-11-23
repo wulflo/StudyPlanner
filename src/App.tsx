@@ -867,23 +867,27 @@ function App() {
     }
   }
 
-  async function handleToggleTask(task: Task) {
+  async function handleToggleTask(task: Task): Promise<boolean> {
     setTaskError(null);
     try {
       await setTaskDone(task.id, task.status !== "done");
       setTasks(await listTasks());
+      return true;
     } catch (reason) {
       setTaskError(messageOf(reason));
+      return false;
     }
   }
 
-  async function handleDeleteTask(task: Task) {
+  async function handleDeleteTask(task: Task): Promise<boolean> {
     setTaskError(null);
     try {
       await deleteTask(task.id);
       setTasks(await listTasks());
+      return true;
     } catch (reason) {
       setTaskError(messageOf(reason));
+      return false;
     }
   }
 

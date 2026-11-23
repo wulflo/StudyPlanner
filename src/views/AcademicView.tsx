@@ -516,9 +516,10 @@ export function AcademicView({
     await run(async () => {
       await deleteAcademicYear(year.id);
       setNotice(t("academic.yearDeleted", { name: year.name }));
-      if (yearForm.id === year.id) {
-        setYearForm(emptyYearForm);
-      }
+      // El año podía contener el término o la materia que se estaba editando.
+      setYearForm(emptyYearForm);
+      setTermForm(emptyTermForm);
+      setSubjectForm(emptySubjectForm);
       await refresh(null, null);
     });
   }
@@ -530,6 +531,8 @@ export function AcademicView({
       if (termForm.id === term.id) {
         setTermForm(emptyTermForm);
       }
+      // Las materias del término desaparecen con él.
+      setSubjectForm(emptySubjectForm);
       await refresh(yearId, null);
     });
   }

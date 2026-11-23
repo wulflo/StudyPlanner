@@ -5,11 +5,9 @@ import { intlLocale, useTranslation } from "../lib/i18n";
 import {
   deleteStudySession,
   finishStudySession,
-  listAcademicYears,
+  listAllSubjects,
   listStudyPriorities,
   listStudySessions,
-  listSubjects,
-  listTerms,
   listTopics,
   type StudyPriorityView,
   type StudySession,
@@ -85,9 +83,7 @@ export function StudyView({
 
     async function loadStructure() {
       try {
-        const years = await listAcademicYears();
-        const terms = years[0] ? await listTerms(years[0].id) : [];
-        const loadedSubjects = terms[0] ? await listSubjects(terms[0].id) : [];
+        const loadedSubjects = await listAllSubjects();
         if (!cancelled) {
           setSubjects(loadedSubjects);
           setSubjectId((current) => current || (loadedSubjects[0]?.id ?? ""));
