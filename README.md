@@ -1,10 +1,13 @@
+<div align="center">
+
+<img src="public/study-planner.png" alt="Study Planner" width="112" />
+
 # Study Planner
 
 **Personal academic organization — strictly local.**
 
-Schedules, subjects, exams, grades, tasks, notes, and spaced repetition in a single SQLite vault. No accounts, no cloud, no telemetry.
-
-**English** · [Español](README.es.md)
+Schedules, subjects, exams, grades, tasks, notes, and spaced repetition in a single SQLite vault.
+No accounts, no cloud, no telemetry.
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 [![Status: v0.2.5](https://img.shields.io/badge/status-v0.2.5-brightgreen.svg)](CHANGELOG.md)
@@ -12,15 +15,61 @@ Schedules, subjects, exams, grades, tasks, notes, and spaced repetition in a sin
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![Platforms: Linux | Windows | macOS](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)](#requirements)
 
-**Repository:** [github.com/wulflo/StudyPlanner](https://github.com/wulflo/StudyPlanner) · **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md) · **Security:** [SECURITY.md](SECURITY.md)
+[English](README.md) · [Español](README.es.md) · [Releases](https://github.com/wulflo/StudyPlanner/releases) · [User guide](docs/USER_GUIDE.en.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+
+</div>
 
 ---
 
+## Contents
+
+- [Project status](#project-status)
+- [Features](#features)
+- [Design principles](#design-principles)
+- [Tech stack](#tech-stack)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Verification](#verification)
+- [Documentation](#documentation)
+- [Project structure](#project-structure)
+- [Security](#security)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Project status
 
-> **Phases 0 through 5 are complete and released.** `v0.2.5` ships as AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX), and macOS, with a signed cross-platform updater, local notifications, and MSIX packaging for the Microsoft Store. It builds on `v0.2.4` (full UI/UX refinement: opaque borders, accent-derived surfaces, structured list rows and a corrected Study layout) and fixes the deletion dead ends (saved rotations, orphan attendance, tasks with subtasks), makes subjects from every year and term reachable across the app, and opens the current term by default. Snap `study-planner` is published from the same release pipeline.
->
-> The app includes light, dark, and system themes, accent colors, a background tray mode, and reminders with optional sound.
+> **Phases 0 through 5 are complete and released.** `v0.2.5` ships with a signed cross-platform updater, local notifications, and Microsoft Store packaging.
+
+| Milestone | Highlights |
+| :--- | :--- |
+| **v0.2.5** | Deletion dead ends fixed (saved rotations, orphan attendance, tasks with subtasks); subjects from every year and term reachable across the app; the current term opens by default. |
+| **v0.2.4** | Full UI/UX refinement: opaque borders, accent-derived surfaces, structured list rows, and a corrected Study layout. |
+| **Distribution** | AppImage, `.deb`, `.rpm`, Snap, Windows (NSIS/MSI/MSIX), and macOS. |
+| **Everyday use** | Light, dark, and system themes; accent colors; background tray mode; reminders with optional sound. |
+
+## Features
+
+**Plan and organize**
+
+- **Today** — a single daily view of classes, due tasks, exams, and reviews.
+- **Calendar** — month view mixing class sessions, exams, tasks, and spaced-repetition events.
+- **Tasks** — subtasks, due dates, priorities, and categories.
+- **Subjects** — academic years, terms, and degree study plans, with every subject reachable from every view.
+- **Schedule** — weekly grid with time slots, rotations, holidays, exceptions, and per-slot attendance.
+
+**Study and measure**
+
+- **Exams and topics** — exam dates, topic tracking, and results that flow into grades.
+- **Grades** — custom scales, weighted categories, and fixed-point precision for the final average.
+- **Study and Pomodoro** — timer, an explainable priority queue, and session history.
+- **Strengths and spaced review** — self-assessment, manual override, and SM-2 scheduling.
+- **Statistics** — progress and performance across subjects and terms.
+
+**Own and protect your data**
+
+- **Verified continuity** — SHA-256, `integrity_check`, and `foreign_key_check` on every backup.
+- **Full export** — one canonical `.txt` file can rebuild the entire vault, byte for byte.
+- **Offline by design** — the UI never touches the network, and no data leaves the device.
 
 ## Design principles
 
@@ -52,7 +101,19 @@ Schedules, subjects, exams, grades, tasks, notes, and spaced repetition in a sin
 - On Linux, **`libayatana-appindicator3`** for the background-mode tray icon. Without it, the app still runs, but closing the window ends the process.
 - **`rg` (ripgrep)** for `scripts/audit-network.sh`; the script falls back to `grep` when ripgrep is not installed.
 
-## Getting started
+## Installation
+
+### Download
+
+Grab the package for your platform from the [latest release](https://github.com/wulflo/StudyPlanner/releases):
+
+| Platform | Packages |
+| :--- | :--- |
+| Linux | AppImage, `.deb`, `.rpm`, Snap |
+| Windows | NSIS, MSI, MSIX |
+| macOS | DMG |
+
+### Build from source
 
 ```bash
 git clone https://github.com/wulflo/StudyPlanner.git

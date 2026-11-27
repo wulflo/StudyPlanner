@@ -1,10 +1,13 @@
+<div align="center">
+
+<img src="public/study-planner.png" alt="Study Planner" width="112" />
+
 # Study Planner
 
 **Organización académica personal — estrictamente local.**
 
-Horarios, materias, exámenes, notas, tareas, apuntes y repaso espaciado en una única bóveda SQLite. Sin cuentas, sin nube y sin telemetría.
-
-[English](README.md) · **Español**
+Horarios, materias, exámenes, notas, tareas, apuntes y repaso espaciado en una única bóveda SQLite.
+Sin cuentas, sin nube y sin telemetría.
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licencia)
 [![Status: v0.2.5](https://img.shields.io/badge/status-v0.2.5-brightgreen.svg)](CHANGELOG.md)
@@ -12,15 +15,61 @@ Horarios, materias, exámenes, notas, tareas, apuntes y repaso espaciado en una 
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![Platforms: Linux | Windows | macOS](https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey.svg)](#requisitos)
 
-**Repositorio:** [github.com/wulflo/StudyPlanner](https://github.com/wulflo/StudyPlanner) · **Contribuir:** [CONTRIBUTING.md](CONTRIBUTING.md) · **Seguridad:** [SECURITY.md](SECURITY.md)
+[English](README.md) · [Español](README.es.md) · [Releases](https://github.com/wulflo/StudyPlanner/releases) · [Guía del usuario](docs/USER_GUIDE.es.md) · [Contribuir](CONTRIBUTING.md) · [Seguridad](SECURITY.md)
+
+</div>
 
 ---
 
+## Contenido
+
+- [Estado del proyecto](#estado-del-proyecto)
+- [Funciones](#funciones)
+- [Principios de diseño](#principios-de-diseño)
+- [Stack tecnológico](#stack-tecnológico)
+- [Requisitos](#requisitos)
+- [Instalación](#instalación)
+- [Verificación](#verificación)
+- [Documentación](#documentación)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Seguridad](#seguridad)
+- [Contribuir](#contribuir)
+- [Licencia](#licencia)
+
 ## Estado del proyecto
 
-> **Las fases 0 a 5 están completas y publicadas.** `v0.2.5` se distribuye como AppImage, `.deb`, `.rpm`, Windows (NSIS/MSI/MSIX) y macOS, con un actualizador firmado multiplataforma, notificaciones locales y empaquetado MSIX para Microsoft Store. Parte de `v0.2.4` (refinamiento integral de interfaz: bordes opacos, superficies derivadas del acento, filas de listas estructuradas y layout de Estudio corregido) y corrige los caminos de borrado bloqueado (rotaciones guardadas, asistencia huérfana, tareas con subtareas), hace alcanzables las materias de todos los años y términos y abre por defecto el término vigente. El snap `study-planner` se publica desde el mismo pipeline de release.
->
-> La app incluye temas claro, oscuro y del sistema, colores de acento, modo de segundo plano en la bandeja y recordatorios con sonido opcional.
+> **Las fases 0 a 5 están completas y publicadas.** `v0.2.5` incluye un actualizador firmado multiplataforma, notificaciones locales y empaquetado para Microsoft Store.
+
+| Hito | Lo más destacado |
+| :--- | :--- |
+| **v0.2.5** | Se desbloquean los borrados (rotaciones guardadas, asistencia huérfana, tareas con subtareas); las materias de todos los años y términos son alcanzables en toda la app; el término vigente se abre por defecto. |
+| **v0.2.4** | Refinamiento integral de interfaz: bordes opacos, superficies derivadas del acento, filas de listas estructuradas y layout de Estudio corregido. |
+| **Distribución** | AppImage, `.deb`, `.rpm`, Snap, Windows (NSIS/MSI/MSIX) y macOS. |
+| **Uso diario** | Temas claro, oscuro y del sistema; colores de acento; modo de segundo plano en la bandeja; recordatorios con sonido opcional. |
+
+## Funciones
+
+**Planificar y organizar**
+
+- **Hoy** — una vista diaria con clases, tareas pendientes, exámenes y repasos.
+- **Calendario** — vista mensual que mezcla clases, exámenes, tareas y eventos de repaso espaciado.
+- **Tareas** — subtareas, fechas de entrega, prioridades y categorías.
+- **Materias** — años académicos, términos y planes de estudio, con todas las materias alcanzables desde cualquier vista.
+- **Horario** — rejilla semanal con franjas, rotaciones, feriados, excepciones y asistencia por franja.
+
+**Estudiar y medir**
+
+- **Exámenes y temas** — fechas de examen, seguimiento de temas y resultados que alimentan las notas.
+- **Notas** — escalas propias, categorías ponderadas y precisión de punto fijo en el promedio final.
+- **Estudio y Pomodoro** — temporizador, cola de prioridad explicable e historial de sesiones.
+- **Fortalezas y repaso espaciado** — autoevaluación, ajuste manual y planificación SM-2.
+- **Estadísticas** — progreso y rendimiento por materia y término.
+
+**Tus datos, protegidos**
+
+- **Continuidad verificada** — SHA-256, `integrity_check` y `foreign_key_check` en cada copia.
+- **Exportación completa** — un único `.txt` canónico puede reconstruir toda la bóveda, byte a byte.
+- **Sin conexión por diseño** — la interfaz nunca toca la red y ningún dato sale del dispositivo.
 
 ## Principios de diseño
 
@@ -52,7 +101,19 @@ Horarios, materias, exámenes, notas, tareas, apuntes y repaso espaciado en una 
 - En Linux, **`libayatana-appindicator3`** para el icono de la bandeja en segundo plano. Sin él, la app funciona, pero cerrar la ventana termina el proceso.
 - **`rg` (ripgrep)** para `scripts/audit-network.sh`; el script usa `grep` cuando ripgrep no está instalado.
 
-## Primeros pasos
+## Instalación
+
+### Descarga
+
+Bajá el paquete para tu plataforma desde el [último release](https://github.com/wulflo/StudyPlanner/releases):
+
+| Plataforma | Paquetes |
+| :--- | :--- |
+| Linux | AppImage, `.deb`, `.rpm`, Snap |
+| Windows | NSIS, MSI, MSIX |
+| macOS | DMG |
+
+### Compilar desde el código
 
 ```bash
 git clone https://github.com/wulflo/StudyPlanner.git
