@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "commands": {
+    // Espejo de .agents/commands/estructure-sync.md. OpenCode solo descubre comandos
+    // en .opencode/commands o aquí; mantener ambos sincronizados.
+    "estructure-sync": {
+      "description": "Actualiza docs/Estructure.md con los cambios del working tree",
+      "template": "Lee `docs/Estructure.md` y actualiza solo las secciones afectadas por este diff:\n\n!`git status --short && git diff --stat && git diff`\n\nRevisa rutas, símbolos, comandos Tauri, claves de almacenamiento y flujos. Conserva el\nformato de las tablas. No modifiques archivos de código."
+    }
+  }
+}
